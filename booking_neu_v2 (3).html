@@ -314,7 +314,7 @@ body { background: var(--dark); color: var(--white); font-family: var(--body); m
           <div class="bf-group"><label>Nachname</label><input type="text" id="inp-nachname" placeholder="Mustermann" required></div>
         </div>
         <div class="bf-group"><label>E-Mail</label><input type="email" id="inp-email" placeholder="max@email.de" required></div>
-        <div class="bf-group"><label>Telefon</label><input type="tel" id="inp-tel" placeholder="+49 152 ..."></div>
+        <div class="bf-group"><label>Telefon</label><input type="tel" id="inp-tel" placeholder="+49 152 ..." required></div>
         <button class="btn-book" id="btnBook" onclick="submitBooking()" disabled>Termin buchen</button>
         <p class="book-note">Kostenlose Stornierung bis 24h vorher · Bestätigung per E-Mail</p>
       </div>
@@ -745,7 +745,7 @@ async function submitBooking() {
   const nachname = document.getElementById('inp-nachname').value.trim();
   const email = document.getElementById('inp-email').value.trim();
   const tel = document.getElementById('inp-tel').value.trim();
-  if (!vorname || !nachname || !email) { alert('Bitte Vor- und Nachname sowie E-Mail ausfüllen.'); return; }
+  if (!vorname || !nachname || !email || !tel) { alert('Bitte Vor- und Nachname, E-Mail sowie Telefonnummer ausfüllen.'); return; }
   const btn = document.getElementById('btnBook');
   btn.disabled = true;
   btn.innerHTML = '<span class="loading-spinner"></span> Wird gebucht...';
