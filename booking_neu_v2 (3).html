@@ -766,7 +766,7 @@ async function submitBooking() {
     window._bookedSlotsDB[selBarber][ds].push({ time: selSlot, duration: dur });
 
     // Storno-Link mit Booking ID
-    const stornoLink = window.location.origin + window.location.pathname.replace(/[^/]*$/, '') + 'cancel.html?id=' + bookingId;
+    const stornoLink = 'https://fastidious-piroshki-071a25.netlify.app/cancel.html?id=' + bookingId;
 
     // Bestätigungs-Email senden
     try {
