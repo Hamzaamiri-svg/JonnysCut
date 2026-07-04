@@ -1,0 +1,957 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Jonny's Cut">
+<meta name="theme-color" content="#0e0e12">
+<title>Jonny's Cut — Admin</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@300;400;500;600;700&family=Oswald:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --dark: #0e0e12; --grey: #161619; --card: #13131a;
+  --border: rgba(255,255,255,0.07); --white: #f0f0f5;
+  --blue: #0057FF; --blue2: #3d80ff; --cyan: #00c8ff;
+  --green: #22c55e; --red: #ef4444; --orange: #f59e0b;
+  --purple: #7c3aed;
+  --heading: 'Oswald', sans-serif; --body: 'Inter', system-ui, sans-serif;
+  --display: 'Bebas Neue', Impact, sans-serif;
+}
+html { -webkit-tap-highlight-color: transparent; }
+body { background: var(--dark); color: var(--white); font-family: var(--body); min-height: 100vh; padding-bottom: 80px; }
+
+.header { background: var(--grey); border-bottom: 1px solid var(--border); padding: 1rem 1.2rem; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; }
+.header-logo { font-family: var(--display); font-size: 1.4rem; background: linear-gradient(90deg, var(--blue), var(--cyan)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+.header-sub { font-size: 0.65rem; color: rgba(255,255,255,0.3); letter-spacing: 0.12em; text-transform: uppercase; font-family: var(--heading); }
+.conn-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); }
+.conn-dot.off { background: var(--red); }
+.conn-dot.connecting { background: var(--orange); animation: pulse 1s infinite; }
+@keyframes pulse { 0%,100%{opacity:1}50%{opacity:0.3} }
+
+.date-nav { display: flex; align-items: center; justify-content: space-between; padding: 0.8rem 1.2rem; background: var(--grey); border-bottom: 1px solid var(--border); }
+.date-nav button { background: rgba(255,255,255,0.05); border: 1px solid var(--border); color: rgba(255,255,255,0.5); width: 36px; height: 36px; font-size: 1.1rem; cursor: pointer; border-radius: 4px; transition: all 0.15s; display: flex; align-items: center; justify-content: center; }
+.date-nav button:hover { background: var(--blue); color: #fff; border-color: var(--blue); }
+.date-display { text-align: center; }
+.date-day { font-family: var(--display); font-size: 1.5rem; line-height: 1; }
+.date-full { font-size: 0.68rem; color: rgba(255,255,255,0.35); letter-spacing: 0.1em; text-transform: uppercase; font-family: var(--heading); margin-top: 0.1rem; }
+.today-btn { font-size: 0.6rem; color: var(--cyan); letter-spacing: 0.1em; text-transform: uppercase; font-family: var(--heading); background: none; border: 1px solid rgba(0,200,255,0.2); padding: 0.25rem 0.5rem; cursor: pointer; margin-top: 0.3rem; }
+
+.barber-tabs { display: flex; overflow-x: auto; border-bottom: 1px solid var(--border); background: var(--grey); scrollbar-width: none; }
+.barber-tabs::-webkit-scrollbar { display: none; }
+.barber-tab { flex-shrink: 0; padding: 0.75rem 1rem; font-family: var(--heading); font-size: 0.7rem; letter-spacing: 0.1em; text-transform: uppercase; color: rgba(255,255,255,0.35); cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.15s; white-space: nowrap; }
+.barber-tab:hover { color: var(--white); }
+.barber-tab.active { color: var(--white); border-bottom-color: var(--blue); }
+.barber-tab.absent { color: var(--red); }
+.barber-tab.absent.active { border-bottom-color: var(--red); }
+.tab-count { display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; background: var(--blue); border-radius: 50%; font-size: 0.55rem; color: #fff; margin-left: 0.4rem; vertical-align: middle; }
+.tab-count.zero { background: rgba(255,255,255,0.1); }
+
+.main { padding: 1rem 1.2rem; }
+
+/* TIMELINE */
+.timeline-wrap { display: flex; gap: 0; }
+.timeline-hours { width: 44px; flex-shrink: 0; position: relative; }
+.timeline-hour-label { position: absolute; font-size: 0.6rem; color: rgba(255,255,255,0.2); font-family: var(--heading); letter-spacing: 0.06em; transform: translateY(-50%); right: 8px; white-space: nowrap; }
+.timeline-grid { flex: 1; position: relative; border-left: 1px solid rgba(255,255,255,0.06); }
+.timeline-hour-line { position: absolute; left: 0; right: 0; border-top: 1px solid rgba(255,255,255,0.05); }
+.timeline-hour-line.half { border-top-style: dashed; opacity: 0.4; }
+.timeline-now-line { position: absolute; left: 0; right: 0; border-top: 2px solid var(--red); z-index: 5; }
+.timeline-now-line::before { content: ''; position: absolute; left: -4px; top: -4px; width: 8px; height: 8px; background: var(--red); border-radius: 50%; }
+.timeline-block {
+  position: absolute; left: 4px; right: 4px;
+  background: rgba(0,87,255,0.2); border: 1px solid rgba(0,87,255,0.4);
+  border-left: 3px solid var(--blue); padding: 0.3rem 0.5rem;
+  cursor: pointer; transition: all 0.15s; overflow: hidden; z-index: 2;
+}
+.timeline-block:hover { background: rgba(0,87,255,0.35); }
+.timeline-block.past { background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.1); border-left-color: rgba(255,255,255,0.2); }
+.timeline-block.substituted { background: rgba(124,58,237,0.2); border-color: rgba(124,58,237,0.4); border-left-color: var(--purple); }
+.timeline-block-name { font-size: 0.75rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.timeline-block-service { font-size: 0.62rem; color: rgba(255,255,255,0.45); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.timeline-block-time { font-size: 0.6rem; color: var(--cyan); font-family: var(--heading); }
+.timeline-block-sub { font-size: 0.58rem; color: var(--purple); font-family: var(--heading); }
+.timeline-gap { position: absolute; left: 4px; right: 4px; background: rgba(34,197,94,0.04); border: 1px dashed rgba(34,197,94,0.15); display: flex; align-items: center; justify-content: center; z-index: 1; }
+.timeline-gap-label { font-size: 0.6rem; color: rgba(34,197,94,0.4); font-family: var(--heading); letter-spacing: 0.08em; text-transform: uppercase; }
+
+.absent-banner { background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.25); padding: 0.8rem 1rem; margin-bottom: 1rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+.absent-text { font-size: 0.8rem; color: var(--red); font-family: var(--heading); letter-spacing: 0.06em; text-transform: uppercase; }
+.absent-sub { font-size: 0.68rem; color: rgba(239,68,68,0.6); margin-top: 0.15rem; }
+.btn-available { background: var(--green); color: #fff; border: none; padding: 0.5rem 0.9rem; font-family: var(--heading); font-size: 0.7rem; letter-spacing: 0.1em; text-transform: uppercase; cursor: pointer; }
+.absent-toggle { margin-bottom: 1rem; }
+.btn-absent { width: 100%; padding: 0.85rem; background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.2); color: var(--red); font-family: var(--heading); font-size: 0.78rem; letter-spacing: 0.12em; text-transform: uppercase; cursor: pointer; transition: all 0.15s; }
+.btn-absent:hover { background: rgba(239,68,68,0.15); }
+
+.stats-row { display: grid; grid-template-columns: repeat(3,1fr); gap: 0.6rem; margin-bottom: 1rem; }
+.stat-card { background: var(--card); border: 1px solid var(--border); padding: 0.8rem; text-align: center; }
+.stat-num { font-family: var(--display); font-size: 1.8rem; line-height: 1; }
+.stat-num.blue { color: var(--blue); }
+.stat-num.green { color: var(--green); }
+.stat-num.orange { color: var(--orange); }
+.section-title { font-family: var(--heading); font-size: 0.62rem; letter-spacing: 0.18em; text-transform: uppercase; color: rgba(255,255,255,0.22); margin-bottom: 0.8rem; }
+
+.detail-card { background: var(--card); border: 1px solid var(--border); margin-bottom: 0.6rem; }
+.detail-card.substituted { border-color: rgba(124,58,237,0.3); }
+.appt-header { display: flex; align-items: center; gap: 0.8rem; padding: 0.9rem 1rem; }
+.appt-time { font-family: var(--display); font-size: 1.5rem; line-height: 1; color: var(--cyan); min-width: 52px; flex-shrink: 0; }
+.appt-time.past { color: rgba(255,255,255,0.25); }
+.appt-info { flex: 1; min-width: 0; }
+.appt-name { font-weight: 600; font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.appt-service { font-size: 0.72rem; color: rgba(255,255,255,0.4); margin-top: 0.15rem; }
+.appt-duration { font-size: 0.65rem; color: var(--blue); margin-top: 0.1rem; font-family: var(--heading); letter-spacing: 0.06em; }
+.appt-sub-badge { display: inline-block; font-size: 0.6rem; background: rgba(124,58,237,0.2); border: 1px solid rgba(124,58,237,0.4); color: var(--purple); padding: 0.15rem 0.5rem; font-family: var(--heading); letter-spacing: 0.06em; margin-top: 0.2rem; }
+.appt-actions { display: flex; gap: 0.4rem; flex-shrink: 0; flex-wrap: wrap; justify-content: flex-end; }
+.btn-call { background: rgba(34,197,94,0.1); border: 1px solid rgba(34,197,94,0.2); color: var(--green); width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 1rem; text-decoration: none; border-radius: 4px; }
+.btn-sub { background: rgba(124,58,237,0.1); border: 1px solid rgba(124,58,237,0.2); color: var(--purple); width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 0.9rem; border-radius: 4px; }
+.btn-cancel-sm { background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.2); color: var(--red); width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 0.9rem; border-radius: 4px; }
+.appt-divider { height: 1px; background: var(--border); margin: 0 1rem; }
+.appt-footer { padding: 0.5rem 1rem; display: flex; gap: 1rem; flex-wrap: wrap; }
+.appt-footer-item { font-size: 0.68rem; color: rgba(255,255,255,0.3); }
+.appt-footer-item a { color: inherit; text-decoration: none; }
+.appt-footer-item span { color: rgba(255,255,255,0.55); }
+
+/* WEEK VIEW */
+.week-scroll { overflow-x: auto; scrollbar-width: none; margin: 0 -1.2rem; padding: 0 1.2rem; }
+.week-scroll::-webkit-scrollbar { display: none; }
+.week-grid { display: grid; grid-template-columns: repeat(7, minmax(110px, 1fr)); gap: 0.5rem; min-width: 770px; }
+.week-day-col { background: var(--card); border: 1px solid var(--border); }
+.week-day-header { padding: 0.6rem 0.7rem; border-bottom: 1px solid var(--border); text-align: center; }
+.week-day-name { font-family: var(--heading); font-size: 0.6rem; letter-spacing: 0.1em; text-transform: uppercase; color: rgba(255,255,255,0.3); }
+.week-day-num { font-family: var(--display); font-size: 1.3rem; line-height: 1; margin-top: 0.1rem; }
+.week-day-col.today .week-day-header { border-bottom-color: var(--blue); }
+.week-day-col.today .week-day-num { color: var(--blue); }
+.week-day-col.today { border-color: rgba(0,87,255,0.3); }
+.week-booking { margin: 0.4rem 0.4rem 0; padding: 0.4rem 0.5rem; background: rgba(0,87,255,0.15); border-left: 2px solid var(--blue); font-size: 0.68rem; }
+.week-booking.past { background: rgba(255,255,255,0.03); border-left-color: rgba(255,255,255,0.15); }
+.week-booking.sub { border-left-color: var(--purple); background: rgba(124,58,237,0.1); }
+.week-booking-time { color: var(--cyan); font-family: var(--heading); font-size: 0.6rem; }
+.week-booking-name { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.week-booking-svc { color: rgba(255,255,255,0.35); font-size: 0.6rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.week-empty { padding: 1rem 0.5rem; text-align: center; font-size: 0.65rem; color: rgba(255,255,255,0.15); font-family: var(--heading); letter-spacing: 0.08em; }
+.week-day-col.absent-day .week-day-header { background: rgba(239,68,68,0.08); }
+.week-day-col.absent-day .week-day-name { color: var(--red); }
+.week-absent-label { text-align: center; font-size: 0.6rem; color: rgba(239,68,68,0.5); font-family: var(--heading); padding: 0.8rem 0; letter-spacing: 0.08em; }
+.week-barber-filter { display: flex; gap: 0.4rem; margin-bottom: 0.8rem; overflow-x: auto; scrollbar-width: none; padding-bottom: 0.2rem; }
+.week-barber-filter::-webkit-scrollbar { display: none; }
+.wbf-btn { flex-shrink: 0; padding: 0.4rem 0.8rem; font-family: var(--heading); font-size: 0.65rem; letter-spacing: 0.1em; text-transform: uppercase; background: rgba(255,255,255,0.04); border: 1px solid var(--border); color: rgba(255,255,255,0.4); cursor: pointer; transition: all 0.15s; }
+.wbf-btn.active { background: rgba(0,87,255,0.15); border-color: var(--blue); color: var(--white); }
+
+/* SETTINGS */
+.settings-card { background: var(--card); border: 1px solid var(--border); padding: 0.9rem 1rem; margin-bottom: 0.6rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+.settings-name { font-family: var(--heading); font-size: 0.85rem; font-weight: 600; }
+.settings-status { font-size: 0.68rem; margin-top: 0.2rem; }
+.toggle-btn { padding: 0.5rem 0.9rem; font-family: var(--heading); font-size: 0.68rem; letter-spacing: 0.08em; text-transform: uppercase; cursor: pointer; border: 1px solid; transition: all 0.15s; }
+
+/* ── SHIFT MANAGEMENT ── */
+.shift-section { margin-bottom: 1.5rem; }
+.shift-barber-card { background: var(--card); border: 1px solid var(--border); margin-bottom: 0.8rem; overflow: hidden; }
+.shift-barber-header { display: flex; align-items: center; justify-content: space-between; padding: 0.9rem 1rem; cursor: pointer; transition: background 0.15s; }
+.shift-barber-header:hover { background: rgba(255,255,255,0.03); }
+.shift-barber-name { font-family: var(--heading); font-size: 0.88rem; font-weight: 600; }
+.shift-barber-summary { font-size: 0.65rem; color: rgba(255,255,255,0.35); margin-top: 0.15rem; }
+.shift-toggle-icon { color: rgba(255,255,255,0.3); font-size: 1rem; transition: transform 0.2s; }
+.shift-toggle-icon.open { transform: rotate(180deg); }
+.shift-days-grid { display: none; padding: 0 1rem 1rem; }
+.shift-days-grid.open { display: block; }
+.shift-day-row { display: flex; align-items: center; gap: 0.6rem; padding: 0.55rem 0; border-bottom: 1px solid rgba(255,255,255,0.04); }
+.shift-day-row:last-child { border-bottom: none; }
+.shift-day-name { font-family: var(--heading); font-size: 0.72rem; letter-spacing: 0.08em; text-transform: uppercase; width: 34px; flex-shrink: 0; color: rgba(255,255,255,0.5); }
+.shift-day-toggle { position: relative; width: 36px; height: 20px; flex-shrink: 0; }
+.shift-day-toggle input { opacity: 0; width: 0; height: 0; }
+.shift-day-toggle-track { position: absolute; inset: 0; background: rgba(255,255,255,0.1); border-radius: 20px; cursor: pointer; transition: background 0.2s; }
+.shift-day-toggle input:checked + .shift-day-toggle-track { background: var(--blue); }
+.shift-day-toggle-track::after { content: ''; position: absolute; width: 14px; height: 14px; border-radius: 50%; background: #fff; top: 3px; left: 3px; transition: transform 0.2s; }
+.shift-day-toggle input:checked + .shift-day-toggle-track::after { transform: translateX(16px); }
+.shift-time-inputs { display: flex; align-items: center; gap: 0.4rem; flex: 1; }
+.shift-time-inputs.disabled { opacity: 0.25; pointer-events: none; }
+.shift-time-input { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); color: var(--white); padding: 0.35rem 0.5rem; font-family: var(--heading); font-size: 0.72rem; letter-spacing: 0.06em; width: 70px; text-align: center; }
+.shift-time-sep { color: rgba(255,255,255,0.25); font-size: 0.75rem; }
+.shift-save-btn { width: 100%; padding: 0.75rem; background: var(--blue); border: none; color: #fff; font-family: var(--heading); font-size: 0.78rem; letter-spacing: 0.12em; text-transform: uppercase; cursor: pointer; margin-top: 0.6rem; transition: background 0.15s; }
+.shift-save-btn:hover { background: var(--blue2); }
+.shift-saved-badge { display: none; background: rgba(34,197,94,0.15); border: 1px solid rgba(34,197,94,0.3); color: var(--green); padding: 0.5rem; text-align: center; font-family: var(--heading); font-size: 0.7rem; letter-spacing: 0.1em; margin-top: 0.5rem; }
+
+/* BOTTOM NAV */
+.bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: var(--grey); border-top: 1px solid var(--border); display: flex; z-index: 100; }
+.nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 0.7rem 0; cursor: pointer; color: rgba(255,255,255,0.3); transition: color 0.15s; font-size: 1.1rem; gap: 0.2rem; }
+.nav-item.active { color: var(--blue); }
+.nav-label { font-size: 0.5rem; font-family: var(--heading); letter-spacing: 0.1em; text-transform: uppercase; }
+
+/* MODALS */
+.modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 200; align-items: flex-end; justify-content: center; }
+.modal-overlay.show { display: flex; }
+.modal { background: var(--grey); border: 1px solid var(--border); border-bottom: none; width: 100%; max-width: 480px; padding: 1.5rem; border-radius: 12px 12px 0 0; }
+.modal-title { font-family: var(--display); font-size: 1.5rem; margin-bottom: 0.5rem; }
+.modal-text { font-size: 0.85rem; color: rgba(255,255,255,0.45); margin-bottom: 1.5rem; line-height: 1.6; }
+.modal-btns { display: flex; gap: 0.8rem; }
+.modal-btn { flex: 1; padding: 0.9rem; font-family: var(--heading); font-size: 0.8rem; letter-spacing: 0.12em; text-transform: uppercase; cursor: pointer; border: none; }
+.modal-btn.cancel { background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.5); }
+.modal-btn.confirm { background: var(--red); color: #fff; }
+.modal-btn.confirm-blue { background: var(--blue); color: #fff; }
+.modal-btn.confirm-purple { background: var(--purple); color: #fff; }
+
+/* Sub modal extras */
+.sub-barber-list { display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 1.2rem; }
+.sub-barber-opt { display: flex; align-items: center; gap: 0.8rem; padding: 0.7rem 0.9rem; background: rgba(255,255,255,0.03); border: 1px solid var(--border); cursor: pointer; transition: all 0.15s; }
+.sub-barber-opt:hover { border-color: var(--purple); background: rgba(124,58,237,0.08); }
+.sub-barber-opt.selected { border-color: var(--purple); background: rgba(124,58,237,0.15); }
+.sub-barber-opt-name { font-family: var(--heading); font-size: 0.8rem; }
+
+/* cancel email preview */
+.email-preview { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); padding: 0.8rem 1rem; margin-bottom: 1rem; border-radius: 4px; }
+.email-preview-label { font-size: 0.6rem; color: rgba(255,255,255,0.25); font-family: var(--heading); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 0.4rem; }
+.email-preview-text { font-size: 0.75rem; color: rgba(255,255,255,0.5); line-height: 1.6; }
+.email-note { font-size: 0.68rem; color: var(--cyan); margin-bottom: 1rem; }
+
+.empty-state { text-align: center; padding: 3rem 1rem; color: rgba(255,255,255,0.2); }
+.empty-icon { font-size: 2.5rem; margin-bottom: 0.8rem; }
+.empty-text { font-family: var(--heading); font-size: 0.8rem; letter-spacing: 0.1em; text-transform: uppercase; }
+.loading { text-align: center; padding: 2rem; color: rgba(255,255,255,0.3); font-size: 0.8rem; font-family: var(--heading); letter-spacing: 0.1em; }
+.spinner { display: inline-block; width: 20px; height: 20px; border: 2px solid rgba(255,255,255,0.1); border-top-color: var(--blue); border-radius: 50%; animation: spin 0.6s linear infinite; margin-bottom: 0.5rem; }
+@keyframes spin { to { transform: rotate(360deg); } }
+input[type="time"]::-webkit-calendar-picker-indicator { filter: invert(0.5); }
+
+@media(min-width:600px) { body { max-width: 480px; margin: 0 auto; } .bottom-nav { max-width: 480px; left: 50%; transform: translateX(-50%); } }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <div class="header-logo">Jonny's Cut</div>
+    <div class="header-sub">Admin Panel</div>
+  </div>
+  <div class="conn-dot connecting" id="connDot"></div>
+</div>
+
+<div class="date-nav">
+  <div style="display:flex;flex-direction:column;gap:0.35rem;align-items:center">
+    <button onclick="changeDay(-7)" title="Eine Woche zurück" style="font-size:0.7rem;letter-spacing:0.05em">«</button>
+    <button onclick="changeDay(-1)" title="Ein Tag zurück">‹</button>
+  </div>
+  <div class="date-display">
+    <div class="date-day" id="dateDay"></div>
+    <div class="date-full" id="dateFull"></div>
+    <button class="today-btn" onclick="goToday()">Heute</button>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:0.35rem;align-items:center">
+    <button onclick="changeDay(7)" title="Eine Woche vor" style="font-size:0.7rem;letter-spacing:0.05em">»</button>
+    <button onclick="changeDay(1)" title="Ein Tag vor">›</button>
+  </div>
+</div>
+
+<div class="barber-tabs" id="barberTabs"></div>
+<div class="main" id="mainContent">
+  <div class="loading"><div class="spinner"></div><br>Lade Termine...</div>
+</div>
+
+<div class="bottom-nav">
+  <div class="nav-item active" id="nav-timeline" onclick="switchTab('timeline')">
+    <span>📋</span><span class="nav-label">Timeline</span>
+  </div>
+  <div class="nav-item" id="nav-week" onclick="switchTab('week')">
+    <span>📆</span><span class="nav-label">Woche</span>
+  </div>
+  <div class="nav-item" id="nav-schichten" onclick="switchTab('schichten')">
+    <span>🕐</span><span class="nav-label">Schichten</span>
+  </div>
+  <div class="nav-item" id="nav-settings" onclick="switchTab('settings')">
+    <span>⚙️</span><span class="nav-label">Einstellungen</span>
+  </div>
+</div>
+
+<!-- CANCEL MODAL -->
+<div class="modal-overlay" id="cancelModal">
+  <div class="modal">
+    <div class="modal-title">Termin stornieren?</div>
+    <div class="email-preview" id="cancelEmailPreview">
+      <div class="email-preview-label">📧 E-Mail wird gesendet an:</div>
+      <div class="email-preview-text" id="cancelEmailText"></div>
+    </div>
+    <div class="email-note">✓ Kunde wird automatisch per E-Mail benachrichtigt</div>
+    <div class="modal-text" id="modalText"></div>
+    <div class="modal-btns">
+      <button class="modal-btn cancel" onclick="closeModal('cancelModal')">Abbrechen</button>
+      <button class="modal-btn confirm" onclick="confirmCancel()">Stornieren + Benachrichtigen</button>
+    </div>
+  </div>
+</div>
+
+<!-- SUBSTITUTION MODAL -->
+<div class="modal-overlay" id="subModal">
+  <div class="modal">
+    <div class="modal-title">Vertretung wählen</div>
+    <div class="modal-text" id="subModalText"></div>
+    <div class="sub-barber-list" id="subBarberList"></div>
+    <div class="modal-btns">
+      <button class="modal-btn cancel" onclick="closeModal('subModal')">Abbrechen</button>
+      <button class="modal-btn confirm-purple" onclick="confirmSub()">Vertretung bestätigen</button>
+    </div>
+  </div>
+</div>
+
+<div id="debugBox" style="display:none;position:fixed;top:0;left:0;right:0;background:#ef4444;color:#fff;padding:1rem;font-size:0.82rem;z-index:9999;font-family:monospace;white-space:pre-wrap;word-break:break-all;"></div>
+<script>
+window.showDebug = function(msg) {
+  const box = document.getElementById('debugBox');
+  box.style.display = 'block';
+  box.textContent = '🔴 FEHLER: ' + msg;
+};
+window.onerror = function(msg, src, line) {
+  window.showDebug(msg + ' (Zeile ' + line + ')');
+};
+</script>
+
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getDatabase, ref, set, remove, onValue, update } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js';
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAXcUYg35hcQKBRZYa8NmU_a8EBKtApLdE",
+  authDomain: "jonny-s-cut.firebaseapp.com",
+  databaseURL: "https://jonny-s-cut-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "jonny-s-cut",
+  storageBucket: "jonny-s-cut.firebasestorage.app",
+  messagingSenderId: "1070305082396",
+  appId: "1:1070305082396:web:2ca5c5cd311973f1d3b3d9"
+};
+
+try {
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+  document.getElementById('connDot').className = 'conn-dot';
+
+  onValue(ref(db, 'bookings'), (snapshot) => {
+    try {
+      window._allBookings = {};
+      if (snapshot.exists()) Object.entries(snapshot.val()).forEach(([id,b]) => window._allBookings[id] = b);
+      if (typeof window.renderCurrentView === 'function') window.renderCurrentView();
+    } catch(e) { window.showDebug('bookings: ' + e.message); }
+  });
+
+  onValue(ref(db, 'absent'), (snapshot) => {
+    try {
+      window._absent = snapshot.exists() ? snapshot.val() : {};
+      if (typeof window.renderCurrentView === 'function') window.renderCurrentView();
+    } catch(e) { window.showDebug('absent: ' + e.message); }
+  });
+
+  onValue(ref(db, 'closedDays'), (snapshot) => {
+    try {
+      const val = snapshot.exists() ? snapshot.val() : {};
+      window._closedDays = typeof val === 'object' && val !== null ? val : {};
+      if (typeof window.renderCurrentView === 'function') window.renderCurrentView();
+    } catch(e) { window.showDebug('closedDays: ' + e.message); }
+  });
+
+  onValue(ref(db, 'shifts'), (snapshot) => {
+    try {
+      window._shifts = snapshot.exists() ? snapshot.val() : {};
+      if (typeof window.renderCurrentView === 'function') window.renderCurrentView();
+    } catch(e) { window.showDebug('shifts: ' + e.message); }
+  });
+
+  window.deleteBooking = async (id) => { await remove(ref(db, 'bookings/' + id)); };
+  window.updateBooking = async (id, data) => { await update(ref(db, 'bookings/' + id), data); };
+  window.setAbsent = async (barberId, date, value) => {
+    const key = barberId + '_' + date;
+    if (value) await set(ref(db, 'absent/' + key), true);
+    else await remove(ref(db, 'absent/' + key));
+  };
+  window.addClosedDay = async (ds, label) => { await set(ref(db, 'closedDays/' + ds), label || 'Ruhetag'); };
+  window.removeClosedDay = async (ds) => { await remove(ref(db, 'closedDays/' + ds)); };
+  window.saveShifts = async (barberId, shiftData) => { await set(ref(db, 'shifts/' + barberId), shiftData); };
+} catch(e) {
+  document.getElementById('connDot').className = 'conn-dot off';
+  const today = new Date();
+  const ds = today.getFullYear()+'-'+String(today.getMonth()+1).padStart(2,'0')+'-'+String(today.getDate()).padStart(2,'0');
+  window._allBookings = {
+    'demo1': {barberId:'jonny',barberName:'Jonny M.',services:'Herren Cut',duration:20,date:ds,time:'09:00',customer:{vorname:'Ali',nachname:'Yilmaz',email:'ali@test.de',tel:'+49152111'}},
+    'demo2': {barberId:'jonny',barberName:'Jonny M.',services:'Haarschnitt & Bartrasur',duration:35,date:ds,time:'10:30',customer:{vorname:'Max',nachname:'Müller',email:'max@test.de',tel:'+49152222'}},
+    'demo3': {barberId:'karim',barberName:'Karim A.',services:'Bartfärben',duration:30,date:ds,time:'11:00',customer:{vorname:'Omar',nachname:'Hassan',email:'omar@test.de',tel:'+49152333'}},
+    'demo4': {barberId:'leon',barberName:'Leon S.',services:'Kids Cut',duration:20,date:ds,time:'14:30',customer:{vorname:'Tom',nachname:'Klein',email:'tom@test.de',tel:'+49152444'}},
+  };
+  window._absent = {};
+  window._closedDays = {};
+  window._shifts = {};
+  window.deleteBooking = async () => {};
+  window.updateBooking = async () => {};
+  window.setAbsent = async () => {};
+  window.addClosedDay = async () => {};
+  window.removeClosedDay = async () => {};
+  window.saveShifts = async () => {};
+}
+</script>
+
+<script>
+const BARBERS = [
+  {id:'alle',name:'Alle'},
+  {id:'jonny',name:'Jonny M.'},
+  {id:'karim',name:'Karim A.'},
+  {id:'leon',name:'Leon S.'},
+  {id:'tarek',name:'Tarek B.'},
+  {id:'malik',name:'Malik D.'},
+  {id:'sami',name:'Sami R.'},
+  {id:'felix',name:'Felix W.'},
+  {id:'noah',name:'Noah K.'},
+];
+const BARBERS_ONLY = BARBERS.filter(b => b.id !== 'alle');
+const MONTHS = ['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
+const DAYS = ['So','Mo','Di','Mi','Do','Fr','Sa'];
+const DAYS_FULL = ['Sonntag','Montag','Dienstag','Mittwoch','Donnerstag','Freitag','Samstag'];
+const DAYS_SHORT = ['So','Mo','Di','Mi','Do','Fr','Sa'];
+const WORK_START = 9, WORK_END = 20;
+const PX_PER_HOUR = 80;
+
+let currentDate = new Date();
+let activeBarber = 'alle';
+let activeTab = 'timeline';
+let cancelId = null;
+let cancelBooking = null;
+let subId = null;
+let subSelectedBarber = null;
+let weekBarberFilter = 'jonny';
+let openShiftBarber = null;
+
+window._allBookings = {};
+window._absent = {};
+window._closedDays = {};
+window._shifts = {};
+
+function dateStr(d) { return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function toMin(t) { if(!t||typeof t!=='string') return 0; const [h,m]=t.split(':').map(Number); return h*60+m; }
+
+function isAbsent(barberId, date) {
+  return window._absent && window._absent[barberId+'_'+date];
+}
+
+function getBookingsForDay(barberId, date) {
+  const ds = typeof date === 'string' ? date : dateStr(date);
+  return Object.entries(window._allBookings||{})
+    .filter(([,b]) => b && b.date && b.time && b.date===ds && (barberId==='alle'||b.barberId===barberId))
+    .sort((a,b) => (a[1].time||'').localeCompare(b[1].time||''));
+}
+
+function getBarberShift(barberId, dayIndex) {
+  // dayIndex: 0=So, 1=Mo ... 6=Sa
+  const shifts = window._shifts && window._shifts[barberId];
+  if (!shifts || !shifts[dayIndex]) return null;
+  return shifts[dayIndex]; // {active:true, start:'09:00', end:'20:00'}
+}
+
+function changeDay(d) { currentDate = new Date(currentDate); currentDate.setDate(currentDate.getDate()+d); renderCurrentView(); }
+function goToday() { currentDate = new Date(); renderCurrentView(); }
+
+function updateDateNav() {
+  const today = new Date();
+  const isToday = dateStr(currentDate)===dateStr(today);
+  document.getElementById('dateDay').textContent = DAYS_FULL[currentDate.getDay()]+', '+currentDate.getDate()+'.';
+  document.getElementById('dateFull').textContent = MONTHS[currentDate.getMonth()]+' '+currentDate.getFullYear()+(isToday?' · Heute':'');
+}
+
+function updateBarberTabs() {
+  const tabs = document.getElementById('barberTabs');
+  tabs.innerHTML = '';
+  BARBERS.forEach(b => {
+    const count = getBookingsForDay(b.id, currentDate).length;
+    const absent = b.id!=='alle' && isAbsent(b.id, dateStr(currentDate));
+    const div = document.createElement('div');
+    div.className = 'barber-tab'+(b.id===activeBarber?' active':'')+(absent?' absent':'');
+    div.innerHTML = b.name+`<span class="tab-count ${count===0?'zero':''}">${count}</span>`;
+    div.onclick = () => { activeBarber=b.id; renderCurrentView(); };
+    tabs.appendChild(div);
+  });
+}
+
+// ── TIMELINE ──
+function renderTimeline() {
+  const bookings = getBookingsForDay(activeBarber, currentDate);
+  const now = new Date();
+  const isToday = dateStr(currentDate)===dateStr(now);
+  const ds = dateStr(currentDate);
+  let html = '';
+
+  if (activeBarber!=='alle' && isAbsent(activeBarber, ds)) {
+    html += `<div class="absent-banner">
+      <div><div class="absent-text">⚠️ Heute abwesend</div><div class="absent-sub">Alle Slots gesperrt</div></div>
+      <button class="btn-available" onclick="toggleAbsent('${activeBarber}',false)">Wieder verfügbar</button>
+    </div>`;
+  }
+
+  const total = bookings.length;
+  const done = isToday ? bookings.filter(([,b])=>{const e=toMin(b.time)+(b.duration||30); return e<(now.getHours()*60+now.getMinutes());}).length : 0;
+  html += `<div class="stats-row">
+    <div class="stat-card"><div class="stat-num blue">${total}</div><div class="stat-label">Gesamt</div></div>
+    <div class="stat-card"><div class="stat-num green">${done}</div><div class="stat-label">Fertig</div></div>
+    <div class="stat-card"><div class="stat-num orange">${total-done}</div><div class="stat-label">Offen</div></div>
+  </div>`;
+
+  if (activeBarber!=='alle' && !isAbsent(activeBarber, ds)) {
+    html += `<div class="absent-toggle"><button class="btn-absent" onclick="toggleAbsent('${activeBarber}',true)">⚠️ Heute nicht verfügbar markieren</button></div>`;
+  }
+
+  html += `<div class="section-title">Timeline — ${activeBarber==='alle'?'Alle Barber':BARBERS.find(b=>b.id===activeBarber)?.name}</div>`;
+
+  const totalHours = WORK_END - WORK_START;
+  const totalPx = totalHours * PX_PER_HOUR;
+
+  html += `<div class="timeline-wrap"><div class="timeline-hours" style="height:${totalPx}px">`;
+  for (let h = WORK_START; h <= WORK_END; h++) {
+    const top = (h - WORK_START) * PX_PER_HOUR;
+    html += `<div class="timeline-hour-label" style="top:${top}px">${String(h).padStart(2,'0')}:00</div>`;
+  }
+  html += `</div><div class="timeline-grid" style="height:${totalPx}px;min-height:${totalPx}px">`;
+
+  for (let h = WORK_START; h <= WORK_END; h++) {
+    const top = (h - WORK_START) * PX_PER_HOUR;
+    html += `<div class="timeline-hour-line" style="top:${top}px"></div>`;
+    if (h < WORK_END) html += `<div class="timeline-hour-line half" style="top:${top + PX_PER_HOUR/2}px"></div>`;
+  }
+
+  if (isToday) {
+    const nowMin = now.getHours()*60+now.getMinutes();
+    const nowPx = ((nowMin/60) - WORK_START) * PX_PER_HOUR;
+    if (nowPx >= 0 && nowPx <= totalPx) {
+      html += `<div class="timeline-now-line" style="top:${nowPx}px"></div>`;
+    }
+  }
+
+  const sorted = [...bookings].sort((a,b)=>(a[1].time||'').localeCompare(b[1].time||''));
+  let prevEnd = WORK_START * 60;
+  sorted.forEach(([,b]) => {
+    const start = toMin(b.time);
+    if (start - prevEnd >= 30) {
+      const gapTop = ((prevEnd/60) - WORK_START) * PX_PER_HOUR;
+      const gapH = ((start - prevEnd)/60) * PX_PER_HOUR;
+      html += `<div class="timeline-gap" style="top:${gapTop}px;height:${gapH}px"><span class="timeline-gap-label">${start - prevEnd} Min frei</span></div>`;
+    }
+    prevEnd = Math.max(prevEnd, start + (b.duration||30));
+  });
+  if (prevEnd < WORK_END * 60 && (WORK_END*60 - prevEnd) >= 30) {
+    const gapTop = ((prevEnd/60) - WORK_START) * PX_PER_HOUR;
+    const gapH = ((WORK_END*60 - prevEnd)/60) * PX_PER_HOUR;
+    html += `<div class="timeline-gap" style="top:${gapTop}px;height:${gapH}px"><span class="timeline-gap-label">${WORK_END*60-prevEnd} Min frei</span></div>`;
+  }
+
+  sorted.forEach(([id, b]) => {
+    const startMin = toMin(b.time);
+    const topPx = ((startMin/60) - WORK_START) * PX_PER_HOUR;
+    const heightPx = Math.max(((b.duration||30)/60) * PX_PER_HOUR, 28);
+    const endMin = startMin + (b.duration||30);
+    const endTime = String(Math.floor(endMin/60)).padStart(2,'0')+':'+String(endMin%60).padStart(2,'0');
+    const isPast = isToday && endMin < (now.getHours()*60+now.getMinutes());
+    const isSub = !!b.substituteId;
+    html += `<div class="timeline-block ${isPast?'past':''} ${isSub?'substituted':''}" style="top:${topPx}px;height:${heightPx}px" onclick="showDetail('${id}')">
+      <div class="timeline-block-time">${b.time}–${endTime}${activeBarber==='alle'?' · '+b.barberName:''}</div>
+      <div class="timeline-block-name">${b.customer?.vorname||''} ${b.customer?.nachname||''}</div>
+      ${heightPx>50&&isSub?`<div class="timeline-block-sub">↔ ${b.substituteName||'Vertretung'}</div>`:''}
+    </div>`;
+  });
+
+  html += `</div></div>`;
+
+  if (sorted.length > 0) {
+    html += `<div style="margin-top:1.2rem"><div class="section-title">Details</div>`;
+    sorted.forEach(([id,b]) => {
+      const startMin = toMin(b.time);
+      const endMin = startMin+(b.duration||30);
+      const endTime = String(Math.floor(endMin/60)).padStart(2,'0')+':'+String(endMin%60).padStart(2,'0');
+      const isPast = isToday && endMin<(now.getHours()*60+now.getMinutes());
+      const tel = b.customer?.tel||'';
+      const isSub = !!b.substituteId;
+      const waMsg = encodeURIComponent(`Hallo ${b.customer?.vorname}, dein Termin bei Jonny's Cut:\\n\\n✂️ ${b.services}\\n📅 ${b.date} um ${b.time} Uhr\\n💈 ${b.barberName}\\n\\nBis dann!`);
+      html += `<div class="detail-card ${isSub?'substituted':''}" id="detail_${id}">
+        <div class="appt-header">
+          <div class="appt-time ${isPast?'past':''}">${b.time}</div>
+          <div class="appt-info">
+            <div class="appt-name">${b.customer?.vorname||''} ${b.customer?.nachname||''}</div>
+            <div class="appt-service">${b.services}</div>
+            <div class="appt-duration">${b.duration} Min · bis ${endTime}${activeBarber==='alle'?' · '+b.barberName:''}</div>
+            ${isSub?`<div class="appt-sub-badge">↔ Ersetzt durch ${b.substituteName||'Vertretung'}</div>`:''}
+          </div>
+          <div class="appt-actions">
+            ${tel?`<a class="btn-call" href="tel:${tel}" title="Anrufen">📞</a>`:''}
+            <button class="btn-sub" onclick="openSubModal('${id}')" title="Vertretung">↔</button>
+            <button class="btn-cancel-sm" onclick="openCancelModal('${id}')" title="Stornieren">✕</button>
+          </div>
+        </div>
+        <div class="appt-divider"></div>
+        <div class="appt-footer">
+          <div class="appt-footer-item">📧 <span>${b.customer?.email||'—'}</span></div>
+          ${tel?`<div class="appt-footer-item"><a href="https://wa.me/${tel.replace(/[^0-9]/g,'')}?text=${waMsg}">💬 <span>WhatsApp</span></a></div>`:''}
+        </div>
+      </div>`;
+    });
+    html += '</div>';
+  } else {
+    html += `<div class="empty-state"><div class="empty-icon">✂️</div><div class="empty-text">Keine Termine heute</div></div>`;
+  }
+
+  document.getElementById('mainContent').innerHTML = html;
+}
+
+function showDetail(id) {
+  const el = document.getElementById('detail_'+id);
+  if (el) { el.scrollIntoView({behavior:'smooth', block:'center'}); el.style.borderColor='var(--blue)'; setTimeout(()=>el.style.borderColor='',1500); }
+}
+
+// ── WEEK VIEW ──
+function renderWeek() {
+  const monday = new Date(currentDate);
+  const day = monday.getDay();
+  const diff = day===0 ? -6 : 1-day;
+  monday.setDate(monday.getDate()+diff);
+  const todayStr = dateStr(new Date());
+  const now = new Date();
+
+  let html = `<div class="section-title">Wochenansicht</div>`;
+
+  // Barber-Filter (nur Einzelpersonen, kein "Alle" in Woche)
+  html += `<div class="week-barber-filter">`;
+  BARBERS_ONLY.forEach(b => {
+    // Termine dieser Woche zählen
+    let weekTotal = 0;
+    for (let i=0; i<7; i++) {
+      const d = new Date(monday); d.setDate(monday.getDate()+i);
+      weekTotal += getBookingsForDay(b.id, dateStr(d)).length;
+    }
+    html += `<button class="wbf-btn ${weekBarberFilter===b.id?'active':''}" onclick="setWeekFilter('${b.id}')">
+      ${b.name}<span class="tab-count ${weekTotal===0?'zero':''}" style="margin-left:0.4rem">${weekTotal}</span>
+    </button>`;
+  });
+  html += `</div>`;
+
+  // Für jeden Tag der Woche: alle Termine des gewählten Barbers
+  for (let i=0; i<7; i++) {
+    const d = new Date(monday);
+    d.setDate(monday.getDate()+i);
+    const ds = dateStr(d);
+    const isToday = ds===todayStr;
+    const bookings = getBookingsForDay(weekBarberFilter, ds);
+    const barberAbsent = isAbsent(weekBarberFilter, ds);
+
+    // Tag-Header
+    html += `<div style="margin-bottom:1.2rem">
+      <div style="display:flex;align-items:center;gap:0.8rem;padding:0.6rem 0;border-bottom:2px solid ${isToday?'var(--blue)':'var(--border)'}; margin-bottom:0.6rem">
+        <div style="font-family:var(--display);font-size:1.6rem;line-height:1;color:${isToday?'var(--blue)':'var(--white)'}">${d.getDate()}</div>
+        <div>
+          <div style="font-family:var(--heading);font-size:0.78rem;letter-spacing:0.1em;text-transform:uppercase;color:${isToday?'var(--blue)':'var(--white)'}">${DAYS_FULL[d.getDay()]}${isToday?' · Heute':''}</div>
+          <div style="font-size:0.62rem;color:rgba(255,255,255,0.25);font-family:var(--heading);letter-spacing:0.08em">${MONTHS[d.getMonth()]} ${d.getFullYear()}</div>
+        </div>
+        ${barberAbsent?`<div style="margin-left:auto;font-size:0.65rem;color:var(--red);font-family:var(--heading);letter-spacing:0.08em;text-transform:uppercase;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.2);padding:0.25rem 0.6rem">⚠️ Abwesend</div>`:''}
+      </div>`;
+
+    if (barberAbsent) {
+      html += `<div style="font-size:0.75rem;color:rgba(239,68,68,0.5);padding:0.4rem 0 0.8rem;font-family:var(--heading);letter-spacing:0.06em">Alle Slots gesperrt</div>`;
+    } else if (bookings.length === 0) {
+      html += `<div style="font-size:0.72rem;color:rgba(255,255,255,0.18);padding:0.4rem 0 0.8rem;font-family:var(--heading);letter-spacing:0.08em;text-transform:uppercase">Keine Termine</div>`;
+    } else {
+      bookings.forEach(([id, b]) => {
+        const startMin = toMin(b.time);
+        const endMin = startMin + (b.duration||30);
+        const endTime = String(Math.floor(endMin/60)).padStart(2,'0')+':'+String(endMin%60).padStart(2,'0');
+        const isPast = isToday && endMin < (now.getHours()*60+now.getMinutes());
+        const tel = b.customer?.tel||'';
+        const isSub = !!b.substituteId;
+        const waMsg = encodeURIComponent(`Hallo ${b.customer?.vorname}, dein Termin bei Jonny's Cut:\n\n✂️ ${b.services}\n📅 ${b.date} um ${b.time} Uhr\n💈 ${b.barberName}\n\nBis dann!`);
+
+        html += `<div class="detail-card ${isSub?'substituted':''}" id="week_${id}" style="margin-bottom:0.5rem">
+          <div class="appt-header">
+            <div class="appt-time ${isPast?'past':''}">${b.time}</div>
+            <div class="appt-info">
+              <div class="appt-name">${b.customer?.vorname||''} ${b.customer?.nachname||''}</div>
+              <div class="appt-service">${b.services}</div>
+              <div class="appt-duration">${b.duration} Min · bis ${endTime}</div>
+              ${isSub?`<div class="appt-sub-badge">↔ Ersetzt durch ${b.substituteName||'Vertretung'}</div>`:''}
+            </div>
+            <div class="appt-actions">
+              ${tel?`<a class="btn-call" href="tel:${tel}" title="Anrufen">📞</a>`:''}
+              <button class="btn-sub" onclick="openSubModal('${id}')" title="Vertretung">↔</button>
+              <button class="btn-cancel-sm" onclick="openCancelModal('${id}')" title="Stornieren">✕</button>
+            </div>
+          </div>
+          <div class="appt-divider"></div>
+          <div class="appt-footer">
+            <div class="appt-footer-item">📧 <span>${b.customer?.email||'—'}</span></div>
+            ${tel?`<div class="appt-footer-item"><a href="https://wa.me/${tel.replace(/[^0-9]/g,'')}?text=${waMsg}">💬 <span>WhatsApp</span></a></div>`:''}
+          </div>
+        </div>`;
+      });
+    }
+
+    html += `</div>`;
+  }
+
+  document.getElementById('mainContent').innerHTML = html;
+}
+
+function setWeekFilter(id) { weekBarberFilter=id; renderWeek(); }
+
+// ── SCHICHTEN ──
+function renderSchichten() {
+  let html = `<div class="section-title">Arbeitsschichten verwalten</div>
+  <p style="font-size:0.78rem;color:rgba(255,255,255,0.35);margin-bottom:1.2rem;line-height:1.6">
+    Hier legst du fest, an welchen Tagen und zu welchen Zeiten jeder Barber arbeitet. Nur an aktiven Tagen werden Slots generiert.
+  </p>`;
+
+  BARBERS_ONLY.forEach(barber => {
+    const shifts = window._shifts && window._shifts[barber.id] ? window._shifts[barber.id] : {};
+    const activeDays = [];
+    [1,2,3,4,5,6,0].forEach(di => {
+      if (shifts[di] && shifts[di].active) activeDays.push(DAYS_SHORT[di]);
+    });
+    const summaryText = activeDays.length > 0 ? activeDays.join(', ') : 'Noch keine Schichten';
+    const isOpen = openShiftBarber === barber.id;
+
+    html += `<div class="shift-barber-card">
+      <div class="shift-barber-header" onclick="toggleShiftBarber('${barber.id}')">
+        <div>
+          <div class="shift-barber-name">${barber.name}</div>
+          <div class="shift-barber-summary">${summaryText}</div>
+        </div>
+        <span class="shift-toggle-icon ${isOpen?'open':''}">▾</span>
+      </div>
+      <div class="shift-days-grid ${isOpen?'open':''}" id="shiftGrid_${barber.id}">`;
+
+    // Mo=1, Di=2, Mi=3, Do=4, Fr=5, Sa=6, So=0
+    const dayOrder = [1,2,3,4,5,6,0];
+    const dayNames = ['Mo','Di','Mi','Do','Fr','Sa','So'];
+    dayOrder.forEach((di, idx) => {
+      const dayShift = shifts[di] || { active: false, start: '09:00', end: '20:00' };
+      const isActive = !!dayShift.active;
+      html += `<div class="shift-day-row">
+        <div class="shift-day-name">${dayNames[idx]}</div>
+        <label class="shift-day-toggle">
+          <input type="checkbox" id="shift_${barber.id}_${di}_active" ${isActive?'checked':''} onchange="onShiftToggle('${barber.id}',${di})">
+          <div class="shift-day-toggle-track"></div>
+        </label>
+        <div class="shift-time-inputs ${isActive?'':'disabled'}" id="shiftTimes_${barber.id}_${di}">
+          <input type="time" class="shift-time-input" id="shift_${barber.id}_${di}_start" value="${dayShift.start||'09:00'}">
+          <span class="shift-time-sep">–</span>
+          <input type="time" class="shift-time-input" id="shift_${barber.id}_${di}_end" value="${dayShift.end||'20:00'}">
+        </div>
+      </div>`;
+    });
+
+    html += `<button class="shift-save-btn" onclick="saveShiftsForBarber('${barber.id}')">💾 Schichten speichern</button>
+      <div class="shift-saved-badge" id="shiftSaved_${barber.id}">✓ Gespeichert!</div>
+    </div></div>`;
+  });
+
+  document.getElementById('mainContent').innerHTML = html;
+}
+
+function toggleShiftBarber(barberId) {
+  openShiftBarber = openShiftBarber === barberId ? null : barberId;
+  renderSchichten();
+}
+
+function onShiftToggle(barberId, dayIndex) {
+  const checked = document.getElementById(`shift_${barberId}_${dayIndex}_active`)?.checked;
+  const timesEl = document.getElementById(`shiftTimes_${barberId}_${dayIndex}`);
+  if (timesEl) {
+    timesEl.classList.toggle('disabled', !checked);
+  }
+}
+
+async function saveShiftsForBarber(barberId) {
+  const dayOrder = [1,2,3,4,5,6,0];
+  const data = {};
+  dayOrder.forEach(di => {
+    const active = document.getElementById(`shift_${barberId}_${di}_active`)?.checked || false;
+    const start = document.getElementById(`shift_${barberId}_${di}_start`)?.value || '09:00';
+    const end = document.getElementById(`shift_${barberId}_${di}_end`)?.value || '20:00';
+    data[di] = { active, start, end };
+  });
+  await window.saveShifts(barberId, data);
+  const badge = document.getElementById(`shiftSaved_${barberId}`);
+  if (badge) { badge.style.display = 'block'; setTimeout(() => { badge.style.display = 'none'; }, 2000); }
+}
+
+// ── SETTINGS ──
+function renderSettings() {
+  const ds = dateStr(currentDate);
+  let html = `<div class="section-title">Verfügbarkeit — ${currentDate.getDate()}. ${MONTHS[currentDate.getMonth()]}</div>`;
+  BARBERS_ONLY.forEach(b => {
+    const absent = isAbsent(b.id, ds);
+    html += `<div class="settings-card">
+      <div>
+        <div class="settings-name">${b.name}</div>
+        <div class="settings-status" style="color:${absent?'var(--red)':'var(--green)'}">${absent?'⚠️ Abwesend':'✓ Verfügbar'}</div>
+      </div>
+      <button class="toggle-btn" onclick="toggleAbsent('${b.id}',${!absent})" style="color:${absent?'var(--green)':'var(--red)'};border-color:${absent?'rgba(34,197,94,0.3)':'rgba(239,68,68,0.3)'};background:${absent?'rgba(34,197,94,0.08)':'rgba(239,68,68,0.08)'}">
+        ${absent?'Verfügbar':'Abwesend'}
+      </button>
+    </div>`;
+  });
+
+  const closed = window._closedDays || {};
+  const sortedClosed = Object.entries(closed).filter(([d]) => d).sort(([a],[b]) => a.localeCompare(b));
+  html += `<div class="section-title" style="margin-top:1.8rem">🔒 Ruhetage & Feiertage</div>`;
+  html += `<div style="background:var(--card);border:1px solid var(--border);padding:1rem;margin-bottom:0.6rem">
+    <div style="display:flex;gap:0.6rem;margin-bottom:0.8rem;flex-wrap:wrap">
+      <input type="date" id="closedDayInput" value="${ds}" style="flex:1;min-width:130px;background:rgba(255,255,255,0.05);border:1px solid var(--border);color:var(--white);padding:0.55rem 0.7rem;font-family:var(--body);font-size:0.82rem">
+      <input type="text" id="closedLabelInput" placeholder="z.B. Feiertag, Urlaub..." style="flex:2;min-width:140px;background:rgba(255,255,255,0.05);border:1px solid var(--border);color:var(--white);padding:0.55rem 0.7rem;font-family:var(--body);font-size:0.82rem">
+      <button onclick="addClosedDayUI()" style="background:var(--blue);border:none;color:#fff;padding:0.55rem 1rem;font-family:var(--heading);font-size:0.78rem;letter-spacing:0.1em;text-transform:uppercase;cursor:pointer;white-space:nowrap">+ Sperren</button>
+    </div>
+    ${sortedClosed.length === 0
+      ? `<div style="font-size:0.78rem;color:rgba(255,255,255,0.25);text-align:center;padding:0.5rem 0">Keine Ruhetage eingetragen</div>`
+      : sortedClosed.map(([d, label]) => {
+          const dateObj = new Date(d + 'T12:00:00');
+          const formatted = dateObj.getDate() + '. ' + MONTHS[dateObj.getMonth()] + ' ' + dateObj.getFullYear();
+          return `<div style="display:flex;align-items:center;justify-content:space-between;padding:0.55rem 0;border-bottom:1px solid var(--border)">
+            <div>
+              <div style="font-size:0.82rem;color:var(--white)">${DAYS_FULL[dateObj.getDay()]}, ${formatted}</div>
+              <div style="font-size:0.68rem;color:rgba(239,68,68,0.7);margin-top:0.1rem">🔒 ${label}</div>
+            </div>
+            <button onclick="removeClosedDayUI('${d}')" style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);color:var(--red);padding:0.35rem 0.7rem;font-size:0.72rem;cursor:pointer;font-family:var(--heading);letter-spacing:0.06em">Entfernen</button>
+          </div>`;
+        }).join('')
+    }
+  </div>`;
+
+  document.getElementById('mainContent').innerHTML = html;
+}
+
+async function addClosedDayUI() {
+  const d = document.getElementById('closedDayInput')?.value;
+  const label = document.getElementById('closedLabelInput')?.value.trim() || 'Ruhetag';
+  if (!d) return;
+  await window.addClosedDay(d, label);
+}
+async function removeClosedDayUI(ds) { await window.removeClosedDay(ds); }
+
+// ── CANCEL MODAL (mit E-Mail-Benachrichtigung) ──
+function openCancelModal(id) {
+  const b = window._allBookings[id];
+  if (!b) return;
+  cancelId = id;
+  cancelBooking = b;
+  const name = `${b.customer?.vorname||''} ${b.customer?.nachname||''}`.trim();
+  const email = b.customer?.email || '';
+  document.getElementById('cancelEmailText').innerHTML =
+    `<strong>${email}</strong><br><br>Betreff: Dein Termin bei Jonny's Cut wurde storniert<br><br>Hallo ${b.customer?.vorname||''},<br>dein Termin am ${b.date} um ${b.time} Uhr (${b.services}) bei ${b.barberName} wurde leider storniert. Bitte buche einen neuen Termin.`;
+  document.getElementById('modalText').textContent = `Termin von ${name} am ${b.date} um ${b.time} Uhr wird gelöscht.`;
+  document.getElementById('cancelModal').classList.add('show');
+}
+
+async function confirmCancel() {
+  if (!cancelId || !cancelBooking) return;
+  const b = cancelBooking;
+  const email = b.customer?.email;
+  if (email) {
+    // Build mailto link — opens mail client with prefilled email
+    const subject = encodeURIComponent(`Dein Termin bei Jonny's Cut wurde storniert`);
+    const body = encodeURIComponent(
+      `Hallo ${b.customer?.vorname||''},\n\n` +
+      `dein Termin bei Jonny's Cut wurde leider storniert:\n\n` +
+      `✂️ Service: ${b.services}\n` +
+      `📅 Datum: ${b.date}\n` +
+      `🕐 Zeit: ${b.time} Uhr\n` +
+      `💈 Barber: ${b.barberName}\n\n` +
+      `Bitte buche einen neuen Wunschtermin über unsere Website.\n\n` +
+      `Entschuldige die Unannehmlichkeiten!\n\n` +
+      `Dein Team von Jonny's Cut`
+    );
+    // Open mail client — in production replace with actual email API (e.g. EmailJS, SendGrid)
+    window.open(`mailto:${email}?subject=${subject}&body=${body}`, '_blank');
+  }
+  await window.deleteBooking(cancelId);
+  closeModal('cancelModal');
+  cancelId = null;
+  cancelBooking = null;
+}
+
+// ── SUBSTITUTION MODAL ──
+function openSubModal(id) {
+  const b = window._allBookings[id];
+  if (!b) return;
+  subId = id;
+  subSelectedBarber = b.substituteId || null;
+  const name = `${b.customer?.vorname||''} ${b.customer?.nachname||''}`.trim();
+  document.getElementById('subModalText').textContent =
+    `Termin von ${name} am ${b.date} um ${b.time} Uhr (${b.services}) — wähle eine Vertretung für ${b.barberName}:`;
+  let listHTML = '';
+  BARBERS_ONLY.filter(bar => bar.id !== b.barberId).forEach(bar => {
+    const isSelected = subSelectedBarber === bar.id;
+    listHTML += `<div class="sub-barber-opt ${isSelected?'selected':''}" onclick="selectSubBarber('${bar.id}','${bar.name}')">
+      <div>
+        <div class="sub-barber-opt-name">${bar.name}</div>
+      </div>
+      ${isSelected?'<span style="color:var(--purple);font-size:1.1rem">✓</span>':''}
+    </div>`;
+  });
+  document.getElementById('subBarberList').innerHTML = listHTML;
+  document.getElementById('subModal').classList.add('show');
+}
+
+function selectSubBarber(id, name) {
+  subSelectedBarber = id;
+  // Re-render list
+  const b = window._allBookings[subId];
+  let listHTML = '';
+  BARBERS_ONLY.filter(bar => bar.id !== b.barberId).forEach(bar => {
+    const isSelected = bar.id === id;
+    listHTML += `<div class="sub-barber-opt ${isSelected?'selected':''}" onclick="selectSubBarber('${bar.id}','${bar.name}')">
+      <div><div class="sub-barber-opt-name">${bar.name}</div></div>
+      ${isSelected?'<span style="color:var(--purple);font-size:1.1rem">✓</span>':''}
+    </div>`;
+  });
+  document.getElementById('subBarberList').innerHTML = listHTML;
+}
+
+async function confirmSub() {
+  if (!subId || !subSelectedBarber) { alert('Bitte einen Barber wählen.'); return; }
+  const subName = BARBERS_ONLY.find(b => b.id === subSelectedBarber)?.name || subSelectedBarber;
+  await window.updateBooking(subId, { substituteId: subSelectedBarber, substituteName: subName });
+  // Also notify customer via email
+  const b = window._allBookings[subId];
+  if (b && b.customer?.email) {
+    const subject = encodeURIComponent(`Update zu deinem Termin bei Jonny's Cut`);
+    const body = encodeURIComponent(
+      `Hallo ${b.customer?.vorname||''},\n\n` +
+      `ein kleines Update zu deinem Termin:\n\n` +
+      `✂️ Service: ${b.services}\n` +
+      `📅 Datum: ${b.date}\n` +
+      `🕐 Zeit: ${b.time} Uhr\n` +
+      `💈 Ursprünglich: ${b.barberName}\n` +
+      `↔️ Vertretung: ${subName}\n\n` +
+      `Dein Termin findet wie geplant statt — nur mit einer Vertretung.\n\n` +
+      `Bis dann!\nDein Team von Jonny's Cut`
+    );
+    window.open(`mailto:${b.customer.email}?subject=${subject}&body=${body}`, '_blank');
+  }
+  closeModal('subModal');
+  subId = null;
+  subSelectedBarber = null;
+}
+
+function closeModal(id) {
+  document.getElementById(id).classList.remove('show');
+}
+
+function renderCurrentView() {
+  updateDateNav();
+  updateBarberTabs();
+  if (activeTab==='timeline') renderTimeline();
+  else if (activeTab==='week') renderWeek();
+  else if (activeTab==='schichten') renderSchichten();
+  else if (activeTab==='settings') renderSettings();
+}
+
+function switchTab(tab) {
+  activeTab=tab;
+  ['timeline','week','schichten','settings'].forEach(t => {
+    document.getElementById('nav-'+t).className='nav-item'+(t===tab?' active':'');
+  });
+  renderCurrentView();
+}
+
+async function toggleAbsent(barberId, value) { await window.setAbsent(barberId, dateStr(currentDate), value); }
+
+renderCurrentView();
+window.renderCurrentView = renderCurrentView;
+</script>
+</body>
+</html>

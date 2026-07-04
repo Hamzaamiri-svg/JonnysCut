@@ -1,0 +1,829 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Jonny's Cut — Termin buchen</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@300;400;500;600;700&family=Oswald:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --dark: #0e0e12; --grey: #161619; --mid: #555560;
+  --white: #f0f0f5; --blue: #0057FF; --blue2: #3d80ff; --cyan: #00c8ff;
+  --display: 'Bebas Neue', Impact, sans-serif;
+  --heading: 'Oswald', sans-serif; --body: 'Inter', system-ui, sans-serif;
+}
+html { scroll-behavior: smooth; }
+body { background: var(--dark); color: var(--white); font-family: var(--body); min-height: 100vh; }
+
+.section-label {
+  font-family: var(--heading); font-size: 0.65rem; font-weight: 500;
+  letter-spacing: 0.28em; text-transform: uppercase;
+  background: linear-gradient(90deg, var(--blue), var(--cyan));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+  display: block; margin-bottom: 0.8rem;
+}
+.section-title { font-family: var(--display); font-size: clamp(2.8rem, 5.5vw, 5rem); line-height: 0.92; text-transform: uppercase; letter-spacing: 0.02em; }
+
+.booking { background: var(--dark); padding: 5rem 5vw; }
+.booking-intro { margin-bottom: 3rem; }
+
+.steps { display: flex; gap: 0; margin-bottom: 3rem; flex-wrap: wrap; }
+.step {
+  display: flex; align-items: center; gap: 0.6rem;
+  font-family: var(--heading); font-size: 0.62rem; letter-spacing: 0.14em;
+  text-transform: uppercase; color: rgba(255,255,255,0.2);
+  padding: 0.7rem 1.2rem; background: rgba(255,255,255,0.02);
+  border: 1px solid rgba(255,255,255,0.05); margin-right: -1px; transition: all 0.2s;
+}
+.step-num {
+  width: 20px; height: 20px; border-radius: 50%;
+  background: rgba(255,255,255,0.08); display: flex; align-items: center;
+  justify-content: center; font-size: 0.65rem; font-weight: 700; flex-shrink: 0;
+}
+.step.active { color: var(--white); background: rgba(0,87,255,0.1); border-color: rgba(0,87,255,0.3); z-index:1; }
+.step.active .step-num { background: var(--blue); }
+.step.done { color: var(--cyan); }
+.step.done .step-num { background: rgba(0,200,255,0.15); color: var(--cyan); }
+
+.barber-grid { display: grid; grid-template-columns: repeat(5,1fr); gap: 0.8rem; margin-bottom: 3rem; }
+.barber-card {
+  background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06);
+  padding: 1.2rem 0.8rem; text-align: center; cursor: pointer;
+  transition: all 0.2s; position: relative; overflow: hidden;
+}
+.barber-card::before {
+  content:''; position:absolute; top:0; left:0; right:0; height:2px;
+  background: linear-gradient(90deg, var(--blue), var(--cyan));
+  transform: scaleX(0); transition: transform 0.2s;
+}
+.barber-card:hover { border-color: rgba(0,87,255,0.3); background: rgba(0,87,255,0.06); }
+.barber-card:hover::before, .barber-card.selected::before { transform: scaleX(1); }
+.barber-card.selected { border-color: var(--blue); background: rgba(0,87,255,0.12); }
+.barber-avatar {
+  width: 52px; height: 52px; border-radius: 50%; margin: 0 auto 0.7rem;
+  background: linear-gradient(135deg, var(--blue), var(--cyan));
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--heading); font-size: 1.1rem; font-weight: 700; color: #fff;
+  position: relative;
+}
+.barber-card.selected .barber-avatar { box-shadow: 0 0 0 2px var(--blue), 0 0 16px rgba(0,87,255,0.4); }
+.barber-status {
+  position: absolute; bottom: 1px; right: 1px; width: 10px; height: 10px;
+  border-radius: 50%; background: #22c55e; border: 2px solid var(--dark);
+}
+.barber-name { font-family: var(--heading); font-size: 0.82rem; font-weight: 600; color: var(--white); }
+.barber-avail { font-size: 0.65rem; color: rgba(255,255,255,0.28); margin-top: 0.2rem; }
+.barber-card.selected .barber-avail { color: var(--cyan); }
+.barber-card.absent { opacity: 0.75; cursor: pointer; border-color: rgba(239,68,68,0.5); background: rgba(239,68,68,0.08); }
+.barber-card.absent::before { background: linear-gradient(90deg, #ef4444, #f97316) !important; transform: scaleX(1) !important; }
+.barber-card.absent .barber-avail { color: #ef4444 !important; }
+
+.service-section { margin-bottom: 3rem; }
+.service-label { font-family: var(--heading); font-size: 0.62rem; letter-spacing: 0.18em; text-transform: uppercase; color: rgba(255,255,255,0.22); margin-bottom: 1rem; }
+.service-categories { display: flex; flex-direction: column; gap: 1.2rem; }
+.svc-cat-title {
+  font-family: var(--heading); font-size: 0.6rem; letter-spacing: 0.2em;
+  text-transform: uppercase; color: var(--blue); margin-bottom: 0.5rem;
+  padding-bottom: 0.3rem; border-bottom: 1px solid rgba(0,87,255,0.15);
+}
+.svc-tags { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.svc-tag {
+  display: flex; align-items: center; gap: 0.5rem;
+  padding: 0.5rem 0.9rem; background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.08); cursor: pointer;
+  transition: all 0.15s; font-size: 0.82rem; color: rgba(255,255,255,0.5);
+  user-select: none;
+}
+.svc-tag:hover { border-color: rgba(0,87,255,0.4); color: var(--white); background: rgba(0,87,255,0.08); }
+.svc-tag.selected { border-color: var(--blue); background: rgba(0,87,255,0.15); color: var(--white); }
+.svc-tag-check { width: 16px; height: 16px; border: 1px solid rgba(255,255,255,0.2); border-radius: 2px; display:flex; align-items:center; justify-content:center; font-size:0.65rem; flex-shrink:0; transition: all 0.15s; }
+.svc-tag.selected .svc-tag-check { background: var(--blue); border-color: var(--blue); }
+.svc-tag-dur { font-size: 0.68rem; color: rgba(255,255,255,0.25); margin-left: 0.2rem; }
+.svc-tag.selected .svc-tag-dur { color: var(--cyan); }
+
+.duration-bar {
+  margin-top: 1rem; padding: 0.7rem 1rem;
+  background: rgba(0,87,255,0.06); border: 1px solid rgba(0,87,255,0.15);
+  display: flex; align-items: center; justify-content: space-between;
+  font-family: var(--heading); font-size: 0.75rem; letter-spacing: 0.08em;
+}
+.duration-bar-label { color: rgba(255,255,255,0.35); text-transform: uppercase; }
+.duration-bar-value { color: var(--cyan); font-size: 0.9rem; }
+.duration-bar-services { font-size: 0.68rem; color: rgba(255,255,255,0.25); margin-top: 0.2rem; max-width: 70%; }
+
+.booking-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4rem; }
+
+.cal-wrap { background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); padding: 2rem; }
+.cal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; }
+.cal-title { font-family: var(--heading); font-size: 1rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #fff; }
+.cal-nav button { background: rgba(255,255,255,0.05); border: none; color: rgba(255,255,255,0.4); width: 30px; height: 30px; cursor: pointer; transition: all 0.2s; margin-left: 4px; font-size: 1rem; }
+.cal-nav button:hover { background: var(--blue); color: #fff; }
+.cal-days-header { display: grid; grid-template-columns: repeat(7,1fr); margin-bottom: 0.4rem; }
+.cal-days-header span { text-align: center; font-size: 0.62rem; letter-spacing: 0.1em; text-transform: uppercase; color: rgba(255,255,255,0.18); padding: 0.3rem 0; }
+.cal-grid { display: grid; grid-template-columns: repeat(7,1fr); gap: 2px; }
+.cal-day { aspect-ratio:1; display:flex; align-items:center; justify-content:center; font-size:0.8rem; color:rgba(255,255,255,0.38); cursor:pointer; transition:all 0.15s; position:relative; }
+.cal-day:hover:not(.inactive) { background: rgba(0,87,255,0.18); color: #fff; }
+.cal-day.inactive { color: rgba(255,255,255,0.1); cursor: default; pointer-events: none; }
+.cal-day.closed { color: rgba(239,68,68,0.5); cursor: default; pointer-events: none; background: rgba(239,68,68,0.06); position: relative; }
+.cal-day.closed::before { content:''; position:absolute; left:15%; right:15%; top:50%; height:1px; background:rgba(239,68,68,0.5); transform:rotate(-20deg); }
+.cal-day.today { outline: 2px solid var(--blue); color: #fff; font-weight: 700; }
+.cal-day.selected { background: var(--blue); color: #fff; font-weight: 700; outline: none; }
+.cal-day.today.selected { background: var(--blue); outline: 2px solid var(--cyan); }.cal-day.has-slots { background: rgba(34,197,94,0.12); border: 1px solid rgba(34,197,94,0.35); color: #fff; }
+.cal-day.has-slots:hover { background: rgba(34,197,94,0.25); }
+.cal-day.has-slots.selected { background: #22c55e; border-color: #22c55e; color: #000; font-weight: 700; }
+
+.slots-section { margin-top: 1.5rem; }
+.slots-header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 0.8rem; }
+.slots-title { font-family: var(--heading); font-size: 0.62rem; letter-spacing: 0.18em; text-transform: uppercase; color: rgba(255,255,255,0.22); }
+.slots-duration-hint { font-size: 0.68rem; color: var(--cyan); opacity: 0.7; }
+.slots-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 0.4rem; }
+.slot { padding: 0.55rem; text-align: center; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07); font-size: 0.78rem; color: rgba(255,255,255,0.45); cursor: pointer; transition: all 0.15s; }
+.slot:hover:not(.booked) { background: rgba(0,87,255,0.18); border-color: var(--blue); color: #fff; }
+.slot.booked { color: rgba(255,255,255,0.1); cursor: default; text-decoration: line-through; }
+.slot.selected { background: var(--blue); border-color: var(--blue); color: #fff; font-weight: 600; }
+.slot-empty { color: rgba(255,255,255,0.2); font-size: 0.78rem; padding: 0.5rem 0; grid-column: span 4; }
+
+.book-form { display: flex; flex-direction: column; gap: 1rem; }
+.bf-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; }
+.bf-group { display: flex; flex-direction: column; gap: 0.4rem; }
+.bf-group label { font-family: var(--heading); font-size: 0.62rem; letter-spacing: 0.16em; text-transform: uppercase; color: rgba(255,255,255,0.22); }
+.bf-group input { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); color: #fff; padding: 0.85rem 1rem; font-family: var(--body); font-size: 0.88rem; outline: none; transition: border-color 0.2s; }
+.bf-group input:focus { border-color: var(--blue); }
+
+.booking-summary { background: rgba(0,87,255,0.08); border: 1px solid rgba(0,87,255,0.2); padding: 1rem 1.2rem; display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 1.5rem; }
+.summary-row { display: flex; justify-content: space-between; align-items: flex-start; font-size: 0.8rem; gap: 1rem; }
+.summary-label { color: rgba(255,255,255,0.35); font-family: var(--heading); letter-spacing: 0.08em; text-transform: uppercase; font-size: 0.65rem; flex-shrink: 0; }
+.summary-value { color: var(--white); font-weight: 500; text-align: right; }
+.summary-value.empty { color: rgba(255,255,255,0.2); font-style: italic; font-weight: 400; }
+
+.btn-book { padding: 1rem; background: var(--blue); color: var(--white); border: none; font-family: var(--heading); font-size: 0.88rem; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; cursor: pointer; transition: background 0.2s; width: 100%; margin-top: 0.5rem; clip-path: polygon(6px 0%,100% 0%,calc(100% - 6px) 100%,0% 100%); }
+.btn-book:hover:not(:disabled) { background: var(--blue2); }
+.btn-book:disabled { opacity: 0.3; cursor: not-allowed; }
+.book-note { font-size: 0.72rem; color: rgba(255,255,255,0.18); text-align: center; }
+
+.success-box { display:none; background: rgba(0,200,255,0.05); border: 1px solid rgba(0,200,255,0.2); padding: 2rem; text-align: center; }
+.success-box.show { display: block; }
+.success-icon { font-size: 2.5rem; margin-bottom: 1rem; }
+.success-title { font-family: var(--display); font-size: 2rem; color: var(--cyan); margin-bottom: 0.5rem; }
+.success-text { font-size: 0.85rem; color: rgba(255,255,255,0.45); line-height: 1.8; }
+
+.loading-spinner { display:inline-block; width:16px; height:16px; border:2px solid rgba(255,255,255,0.2); border-top-color:#fff; border-radius:50%; animation:spin 0.6s linear infinite; margin-right:0.5rem; vertical-align:middle; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.firebase-status { font-size:0.7rem; padding:0.5rem 0.8rem; margin-bottom:1.5rem; display:inline-flex; align-items:center; gap:0.4rem; border:1px solid rgba(255,255,255,0.06); color:rgba(255,255,255,0.3); }
+.firebase-dot { width:6px; height:6px; border-radius:50%; background:#22c55e; flex-shrink:0; }
+.firebase-dot.connecting { background:#f59e0b; animation:pulse 1s infinite; }
+.firebase-dot.error { background:#ef4444; }
+@keyframes pulse { 0%,100%{opacity:1}50%{opacity:0.3} }
+
+/* Schicht-Hinweis unter Barber-Card */
+.barber-hours { font-size: 0.6rem; color: rgba(0,200,255,0.5); margin-top: 0.15rem; }
+.barber-card.no-shift { opacity: 0.45; cursor: not-allowed; border-color: rgba(255,255,255,0.04); }
+.barber-card.no-shift::before { display: none; }
+
+@media(max-width:900px) { .barber-grid{grid-template-columns:repeat(3,1fr);} .booking-grid{grid-template-columns:1fr;gap:2.5rem;} }
+@media(max-width:600px) { .barber-grid{grid-template-columns:repeat(3,1fr);} .booking{padding:3rem 5vw;} .slots-grid{grid-template-columns:repeat(3,1fr);} .bf-row{grid-template-columns:1fr;} }
+</style>
+</head>
+<body>
+
+<section class="booking" id="booking">
+  <div class="booking-intro">
+    <span class="section-label">Terminbuchung</span>
+    <h2 class="section-title">Wann kommst<br>du rein?</h2>
+  </div>
+
+  <div class="steps">
+    <div class="step active" id="step1"><span class="step-num">1</span> Barber wählen</div>
+    <div class="step" id="step2"><span class="step-num">2</span> Services wählen</div>
+    <div class="step" id="step3"><span class="step-num">3</span> Termin wählen</div>
+    <div class="step" id="step4"><span class="step-num">4</span> Buchen</div>
+  </div>
+
+  <div class="firebase-status" id="fbStatus">
+    <span class="firebase-dot connecting" id="fbDot"></span>
+    <span id="fbText">Verbinde mit Datenbank...</span>
+  </div>
+
+  <!-- 1. BARBER -->
+  <div class="barber-grid" id="barberGrid">
+    <div class="barber-card" data-barber-id="jonny" onclick="selectBarber('jonny','Jonny M.',this)">
+      <div class="barber-avatar">JM<div class="barber-status"></div></div>
+      <div class="barber-name">Jonny M.</div>
+      <div class="barber-avail" id="avail_jonny">Verfügbar</div>
+      <div class="barber-hours" id="hours_jonny"></div>
+    </div>
+    <div class="barber-card" data-barber-id="karim" onclick="selectBarber('karim','Karim A.',this)">
+      <div class="barber-avatar" style="background:linear-gradient(135deg,#7c3aed,#0057FF)">KA<div class="barber-status"></div></div>
+      <div class="barber-name">Karim A.</div>
+      <div class="barber-avail" id="avail_karim">Verfügbar</div>
+      <div class="barber-hours" id="hours_karim"></div>
+    </div>
+    <div class="barber-card" data-barber-id="leon" onclick="selectBarber('leon','Leon S.',this)">
+      <div class="barber-avatar" style="background:linear-gradient(135deg,#0057FF,#00c8ff)">LS<div class="barber-status"></div></div>
+      <div class="barber-name">Leon S.</div>
+      <div class="barber-avail" id="avail_leon">Verfügbar</div>
+      <div class="barber-hours" id="hours_leon"></div>
+    </div>
+    <div class="barber-card" data-barber-id="tarek" onclick="selectBarber('tarek','Tarek B.',this)">
+      <div class="barber-avatar" style="background:linear-gradient(135deg,#0e7490,#0057FF)">TB<div class="barber-status"></div></div>
+      <div class="barber-name">Tarek B.</div>
+      <div class="barber-avail" id="avail_tarek">Verfügbar</div>
+      <div class="barber-hours" id="hours_tarek"></div>
+    </div>
+    <div class="barber-card" data-barber-id="malik" onclick="selectBarber('malik','Malik D.',this)">
+      <div class="barber-avatar" style="background:linear-gradient(135deg,#1d4ed8,#7c3aed)">MD<div class="barber-status"></div></div>
+      <div class="barber-name">Malik D.</div>
+      <div class="barber-avail" id="avail_malik">Verfügbar</div>
+      <div class="barber-hours" id="hours_malik"></div>
+    </div>
+  </div>
+
+  <!-- 2. SERVICES -->
+  <div class="service-section">
+    <div class="service-label">Services wählen — mehrere möglich</div>
+    <div class="service-categories">
+      <div>
+        <div class="svc-cat-title">Trocken Haarschnitte</div>
+        <div class="svc-tags">
+          <div class="svc-tag" onclick="toggleSvc(this,'Herren Cut',20)"><span class="svc-tag-check"></span>✂️ Herren Cut<span class="svc-tag-dur">20 Min</span></div>
+          <div class="svc-tag" onclick="toggleSvc(this,'Kids Cut',20)"><span class="svc-tag-check"></span>✂️ Kids Cut<span class="svc-tag-dur">20 Min</span></div>
+        </div>
+      </div>
+      <div>
+        <div class="svc-cat-title">Bart & Rasur</div>
+        <div class="svc-tags">
+          <div class="svc-tag" onclick="toggleSvc(this,'Haarschnitt & Bartrasur',35)"><span class="svc-tag-check"></span>Haarschnitt & Bartrasur<span class="svc-tag-dur">35 Min</span></div>
+          <div class="svc-tag" onclick="toggleSvc(this,'Bart Trimmen & Formen',15)"><span class="svc-tag-check"></span>Bart Trimmen & Formen<span class="svc-tag-dur">15 Min</span></div>
+          <div class="svc-tag" onclick="toggleSvc(this,'Model Bartrasur',25)"><span class="svc-tag-check"></span>Model Bartrasur<span class="svc-tag-dur">25 Min</span></div>
+          <div class="svc-tag" onclick="toggleSvc(this,'Bartfärben',30)"><span class="svc-tag-check"></span>Bartfärben<span class="svc-tag-dur">30 Min</span></div>
+        </div>
+      </div>
+      <div>
+        <div class="svc-cat-title">Special Service</div>
+        <div class="svc-tags">
+          <div class="svc-tag" onclick="toggleSvc(this,'Waschen, Schneiden & Föhnen',40)"><span class="svc-tag-check"></span>Waschen, Schneiden & Föhnen<span class="svc-tag-dur">40 Min</span></div>
+          <div class="svc-tag" onclick="toggleSvc(this,'Augenbrauen Zupfen',10)"><span class="svc-tag-check"></span>Augenbrauen Zupfen<span class="svc-tag-dur">10 Min</span></div>
+          <div class="svc-tag" onclick="toggleSvc(this,'Gesichtsmaske',20)"><span class="svc-tag-check"></span>Gesichtsmaske<span class="svc-tag-dur">20 Min</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="duration-bar" id="durationBar" style="display:none">
+      <div>
+        <div class="duration-bar-label">Gesamtdauer</div>
+        <div class="duration-bar-services" id="durServices"></div>
+      </div>
+      <div class="duration-bar-value" id="durTotal">0 Min</div>
+    </div>
+  </div>
+
+  <!-- 3 & 4. CALENDAR + FORM -->
+  <div class="booking-grid">
+    <div>
+      <div class="cal-wrap">
+        <div class="cal-header">
+          <div class="cal-title" id="calMonth"></div>
+          <div class="cal-nav"><button onclick="changeMonth(-1)">‹</button><button onclick="changeMonth(1)">›</button></div>
+        </div>
+        <div class="cal-days-header"><span>Mo</span><span>Di</span><span>Mi</span><span>Do</span><span>Fr</span><span>Sa</span><span>So</span></div>
+        <div class="cal-grid" id="calGrid"></div>
+      </div>
+      <div class="slots-section">
+        <div class="slots-header">
+          <div class="slots-title">Verfügbare Startzeiten</div>
+          <div class="slots-duration-hint" id="slotsDurHint"></div>
+        </div>
+        <div class="slots-grid" id="slotsGrid">
+          <div class="slot-empty">← Barber & Services wählen, dann Tag klicken</div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="booking-summary">
+        <div class="summary-row"><span class="summary-label">Barber</span><span class="summary-value empty" id="sum-barber">Noch nicht gewählt</span></div>
+        <div class="summary-row"><span class="summary-label">Services</span><span class="summary-value empty" id="sum-service">Noch nicht gewählt</span></div>
+        <div class="summary-row"><span class="summary-label">Gesamtdauer</span><span class="summary-value empty" id="sum-duration">—</span></div>
+        <div class="summary-row"><span class="summary-label">Datum & Zeit</span><span class="summary-value empty" id="sum-datetime">Noch nicht gewählt</span></div>
+      </div>
+
+      <div class="book-form" id="bookForm">
+        <div class="bf-row">
+          <div class="bf-group"><label>Vorname</label><input type="text" id="inp-vorname" placeholder="Max" required></div>
+          <div class="bf-group"><label>Nachname</label><input type="text" id="inp-nachname" placeholder="Mustermann" required></div>
+        </div>
+        <div class="bf-group"><label>E-Mail</label><input type="email" id="inp-email" placeholder="max@email.de" required></div>
+        <div class="bf-group"><label>Telefon</label><input type="tel" id="inp-tel" placeholder="+49 152 ..."></div>
+        <button class="btn-book" id="btnBook" onclick="submitBooking()" disabled>Termin buchen</button>
+        <p class="book-note">Kostenlose Stornierung bis 24h vorher · Bestätigung per E-Mail</p>
+      </div>
+
+      <div class="success-box" id="successBox">
+        <div class="success-icon">✂️</div>
+        <div class="success-title">Termin bestätigt!</div>
+        <div class="success-text" id="successText"></div>
+        <button class="btn-book" style="margin-top:1.5rem;max-width:200px;margin:1.5rem auto 0;display:block" onclick="resetBooking()">Weiteren Termin buchen</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div id="debugBox" style="display:none;position:fixed;top:0;left:0;right:0;background:#ef4444;color:#fff;padding:1rem;font-size:0.85rem;z-index:9999;font-family:monospace;white-space:pre-wrap;"></div>
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<script>emailjs.init('5O5WaqPef_AUBVmlr');</script>
+<script>
+window.showDebug = function(msg) {
+  const box = document.getElementById('debugBox');
+  box.style.display = 'block';
+  box.textContent = '🔴 FEHLER: ' + msg;
+};
+window.onerror = function(msg, src, line) {
+  window.showDebug(msg + ' (Zeile ' + line + ')');
+};
+</script>
+
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getDatabase, ref, set, onValue } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js';
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAXcUYg35hcQKBRZYa8NmU_a8EBKtApLdE",
+  authDomain: "jonny-s-cut.firebaseapp.com",
+  databaseURL: "https://jonny-s-cut-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "jonny-s-cut",
+  storageBucket: "jonny-s-cut.firebasestorage.app",
+  messagingSenderId: "1070305082356",
+  appId: "1:1070305082396:web:2ca5c5cd311973f1d3b3d9"
+};
+
+window._bookedSlotsDB = {};
+window._absentToday = {};
+window._closedDays = {};
+window._shifts = {}; // NEU: Schichtpläne
+
+try {
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+  document.getElementById('fbDot').className = 'firebase-dot';
+  document.getElementById('fbText').textContent = 'Echtzeit-Datenbank verbunden';
+
+  onValue(ref(db, 'bookings'), (snapshot) => {
+    try {
+      window._bookedSlotsDB = {};
+      if (snapshot.exists()) {
+        Object.values(snapshot.val()).forEach(b => {
+          const { barberId, date, time, duration, substituteId } = b;
+          // Wenn Vertretung → Termin zählt für den Vertretungs-Barber
+          const effectiveBarberId = substituteId || barberId;
+          if (!window._bookedSlotsDB[effectiveBarberId]) window._bookedSlotsDB[effectiveBarberId] = {};
+          if (!window._bookedSlotsDB[effectiveBarberId][date]) window._bookedSlotsDB[effectiveBarberId][date] = [];
+          window._bookedSlotsDB[effectiveBarberId][date].push({ time, duration: duration || 30 });
+        });
+      }
+      if (window.selDay && typeof window.renderSlots === 'function') window.renderSlots();
+    } catch(e) { window.showDebug('bookings callback: ' + e.message); }
+  });
+
+  onValue(ref(db, 'absent'), (snapshot) => {
+    try {
+      window._absentToday = snapshot.exists() ? snapshot.val() : {};
+      if (typeof window.updateBarberCards === 'function') window.updateBarberCards();
+    } catch(e) { window.showDebug('absent callback: ' + e.message); }
+  });
+
+  onValue(ref(db, 'closedDays'), (snapshot) => {
+    try {
+      window._closedDays = snapshot.exists() ? snapshot.val() : {};
+      if (typeof window.renderCal === 'function') window.renderCal();
+    } catch(e) { window.showDebug('closedDays callback: ' + e.message); }
+  });
+
+  // NEU: Schichten live hören
+  onValue(ref(db, 'shifts'), (snapshot) => {
+    try {
+      window._shifts = snapshot.exists() ? snapshot.val() : {};
+      if (typeof window.updateBarberCards === 'function') window.updateBarberCards();
+      if (typeof window.renderCal === 'function') window.renderCal();
+      if (window.selDay && typeof window.renderSlots === 'function') window.renderSlots();
+    } catch(e) { window.showDebug('shifts callback: ' + e.message); }
+  });
+
+  window.saveToFirebase = async function(booking, id) {
+    const bookingId = id || ('booking_' + Date.now());
+    await set(ref(db, 'bookings/' + bookingId), booking);
+  };
+} catch(e) {
+  document.getElementById('fbDot').className = 'firebase-dot error';
+  document.getElementById('fbText').textContent = 'Demo-Modus (Firebase nicht konfiguriert)';
+  window._bookedSlotsDB = {};
+  window._absentToday = {};
+  window._closedDays = {};
+  window._shifts = {};
+  window.saveToFirebase = async function() {};
+}
+</script>
+
+<script>
+let selBarber = null, selBarberName = null;
+let selectedServices = [];
+let selDay = null, selSlot = null;
+let cy = new Date().getFullYear(), cm = new Date().getMonth();
+
+const months = ['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
+const SLOT_STEP = 20; // Alle 20 Minuten prüfen
+const DEFAULT_START = 9 * 60;       // Fallback 09:00
+const DEFAULT_END   = 19 * 60 + 20; // Fallback → letzter Slot 19:20
+
+function totalDuration() { return selectedServices.reduce((s,x) => s + x.duration, 0); }
+function toMin(t) { if (!t || typeof t !== 'string') return 0; const [h,m] = t.split(':').map(Number); return h*60+m; }
+function toTime(min) { return String(Math.floor(min/60)).padStart(2,'0') + ':' + String(min%60).padStart(2,'0'); }
+
+// ── SCHICHT LOGIK ──
+// Gibt { start: Minuten, end: Minuten } für einen Barber an einem bestimmten Datum zurück.
+// Wenn keine Schicht konfiguriert → Fallback 9-20.
+// Wenn Schicht konfiguriert aber Tag nicht aktiv → null (kein Dienst).
+function getBarberShiftForDate(barberId, dateStr) {
+  const shifts = window._shifts && window._shifts[barberId];
+  if (!shifts) return { start: DEFAULT_START, end: DEFAULT_END }; // kein Shift gespeichert → Fallback
+  const dateObj = new Date(dateStr + 'T12:00:00');
+  const dayIndex = dateObj.getDay(); // 0=So, 1=Mo ... 6=Sa
+  const dayShift = shifts[dayIndex];
+  if (!dayShift || !dayShift.active) return null; // Tag nicht aktiv → kein Dienst
+  return {
+    start: toMin(dayShift.start || '09:00'),
+    end:   toMin(dayShift.end   || '20:00')
+  };
+}
+
+// Gibt Schichtzeiten als lesbaren String zurück, z.B. "09:00–18:00"
+function getShiftLabel(barberId, dateStr) {
+  const shift = getBarberShiftForDate(barberId, dateStr);
+  if (!shift) return null;
+  return toTime(shift.start) + '–' + toTime(shift.end);
+}
+
+// Prüft ob ein Barber an einem bestimmten Datum laut Schichtplan arbeitet
+function barberWorksOn(barberId, dateStr) {
+  const shifts = window._shifts && window._shifts[barberId];
+  if (!shifts) return true; // kein Schichtplan → immer verfügbar (Fallback)
+  const dateObj = new Date(dateStr + 'T12:00:00');
+  const dayIndex = dateObj.getDay();
+  const dayShift = shifts[dayIndex];
+  return !!(dayShift && dayShift.active);
+}
+
+function getBookedRanges(barberId, dateStr) {
+  const db = window._bookedSlotsDB || {};
+  const entries = (db[barberId] && db[barberId][dateStr]) || [];
+  return entries.filter(e => e.time).map(e => {
+    const start = toMin(e.time);
+    return { start, end: start + (e.duration || 30) };
+  });
+}
+
+function isSlotFree(start, duration, bookedRanges) {
+  const end = start + duration;
+  return !bookedRanges.some(r => start < r.end && end > r.start);
+}
+
+// ── KERNLOGIK: Slots nur innerhalb der Schichtzeit + keine vergangenen Slots heute ──
+function getAvailableSlots(barberId, ds, duration) {
+  if (!duration) return [];
+  const shift = getBarberShiftForDate(barberId, ds);
+  if (!shift) return []; // Tag nicht in Schicht → keine Slots
+  const ranges = getBookedRanges(barberId, ds);
+
+  // Für heute: frühester Slot = aktuelle Uhrzeit (aufgerundet auf nächsten SLOT_STEP)
+  const today = new Date();
+  const todayStr = today.getFullYear()+'-'+String(today.getMonth()+1).padStart(2,'0')+'-'+String(today.getDate()).padStart(2,'0');
+  let earliest = shift.start;
+  if (ds === todayStr) {
+    const nowMin = today.getHours() * 60 + today.getMinutes();
+    // Aufrunden auf nächsten SLOT_STEP
+    const nextSlot = Math.ceil(nowMin / SLOT_STEP) * SLOT_STEP;
+    earliest = Math.max(shift.start, nextSlot);
+  }
+
+  const slots = [];
+  for (let t = earliest; t + duration <= shift.end; t += SLOT_STEP) {
+    if (isSlotFree(t, duration, ranges)) {
+      slots.push(toTime(t));
+    }
+  }
+  return slots;
+}
+
+function dateStrFn(y, m, d) {
+  return `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+}
+
+// ── BARBER CARDS aktualisieren ──
+// Cards sind IMMER anklickbar — rot = heute nicht da, aber andere Tage buchbar.
+// Der Kalender blockiert einzelne Tage selbst (Schicht / abwesend / Ruhetag).
+function updateBarberCards() {
+  const today = new Date();
+  const todayStr = today.getFullYear()+'-'+String(today.getMonth()+1).padStart(2,'0')+'-'+String(today.getDate()).padStart(2,'0');
+
+  document.querySelectorAll('.barber-card').forEach(card => {
+    const barberId = card.dataset.barberId;
+    if (!barberId) return;
+    const availEl = document.getElementById('avail_' + barberId);
+    const hoursEl = document.getElementById('hours_' + barberId);
+
+    // Immer klickbar
+    card.classList.remove('absent', 'no-shift');
+    card.style.cursor = 'pointer';
+    card.onclick = function() { selectBarber(barberId, card.querySelector('.barber-name').textContent, card); };
+
+    const absentKey = barberId + '_' + todayStr;
+    const isAbsentToday = !!(window._absentToday && window._absentToday[absentKey]);
+    const worksToday = barberWorksOn(barberId, todayStr);
+
+    if (isAbsentToday) {
+      // Krank/abwesend heute → rot, aber buchbar für andere Tage
+      card.classList.add('absent');
+      if (availEl) availEl.textContent = 'Heute nicht da';
+      if (hoursEl) hoursEl.textContent = 'Andere Tage wählbar ↓';
+    } else if (!worksToday) {
+      // Kein Dienst heute laut Schichtplan → rot, andere Tage buchbar
+      card.classList.add('absent');
+      if (availEl) availEl.textContent = 'Heute kein Dienst';
+      // Nächsten Arbeitstag finden und anzeigen
+      const nextDay = getNextWorkDay(barberId, today);
+      if (hoursEl) hoursEl.textContent = nextDay ? 'Nächster Dienst: ' + nextDay : 'Andere Tage wählbar ↓';
+    } else {
+      // Heute verfügbar → grün, Schichtzeiten anzeigen
+      if (availEl) availEl.textContent = 'Verfügbar';
+      const label = getShiftLabel(barberId, todayStr);
+      if (hoursEl) hoursEl.textContent = label ? label + ' Uhr' : '';
+    }
+  });
+
+  if (selBarber) renderCal();
+}
+
+// Findet den nächsten Tag (ab morgen) an dem der Barber laut Schichtplan arbeitet
+function getNextWorkDay(barberId, fromDate) {
+  const DAYS_SHORT = ['So','Mo','Di','Mi','Do','Fr','Sa'];
+  for (let i = 1; i <= 7; i++) {
+    const d = new Date(fromDate);
+    d.setDate(d.getDate() + i);
+    const ds = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+    if (barberWorksOn(barberId, ds) && !isBarberAbsentOn(barberId, ds)) {
+      return DAYS_SHORT[d.getDay()];
+    }
+  }
+  return null;
+}
+
+function isBarberAbsentOn(barberId, ds) {
+  return window._absentToday && window._absentToday[barberId + '_' + ds];
+}
+
+// ── BARBER AUSWÄHLEN ──
+function selectBarber(id, name, el) {
+  if (!el) return;
+  selBarber = id; selBarberName = name;
+  selDay = null; selSlot = null;
+  document.querySelectorAll('.barber-card').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+  document.getElementById('sum-barber').textContent = name;
+  document.getElementById('sum-barber').classList.remove('empty');
+  updateSteps(); renderCal(); checkBookBtn();
+}
+
+// ── SERVICES ──
+function toggleSvc(el, name, duration) {
+  const idx = selectedServices.findIndex(s => s.name === name);
+  if (idx > -1) { selectedServices.splice(idx, 1); el.classList.remove('selected'); }
+  else { selectedServices.push({ name, duration }); el.classList.add('selected'); }
+  selDay = null; selSlot = null;
+  updateDurationBar(); updateSummaryServices();
+  updateSteps(); renderCal(); renderSlots(); checkBookBtn();
+}
+
+function updateDurationBar() {
+  const bar = document.getElementById('durationBar');
+  const total = totalDuration();
+  if (selectedServices.length === 0) { bar.style.display = 'none'; return; }
+  bar.style.display = 'flex';
+  document.getElementById('durTotal').textContent = total + ' Min';
+  document.getElementById('durServices').textContent = selectedServices.map(s => s.name + ' ' + s.duration + 'Min').join(' + ');
+}
+
+function updateSummaryServices() {
+  const el = document.getElementById('sum-service');
+  const dur = document.getElementById('sum-duration');
+  if (selectedServices.length === 0) {
+    el.textContent = 'Noch nicht gewählt'; el.classList.add('empty');
+    dur.textContent = '—'; dur.classList.add('empty');
+  } else {
+    el.textContent = selectedServices.map(s => s.name).join(' + ');
+    el.classList.remove('empty');
+    dur.textContent = totalDuration() + ' Minuten';
+    dur.classList.remove('empty');
+  }
+}
+
+// ── KALENDER ──
+function renderCal() {
+  const today = new Date();
+  const todayStr = today.getFullYear()+'-'+String(today.getMonth()+1).padStart(2,'0')+'-'+String(today.getDate()).padStart(2,'0');
+  const grid = document.getElementById('calGrid');
+  document.getElementById('calMonth').textContent = months[cm] + ' ' + cy;
+  const first = new Date(cy, cm, 1).getDay();
+  const offset = first === 0 ? 6 : first - 1;
+  const days = new Date(cy, cm + 1, 0).getDate();
+  grid.innerHTML = '';
+
+  for (let i = 0; i < offset; i++) {
+    const d = document.createElement('div'); d.className = 'cal-day inactive'; grid.appendChild(d);
+  }
+
+  for (let d = 1; d <= days; d++) {
+    const el = document.createElement('div'); el.className = 'cal-day'; el.textContent = d;
+    const thisDate = new Date(cy, cm, d);
+    const todayDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const isPast = thisDate < todayDate;
+    const isSunday = thisDate.getDay() === 0;
+    if (d === today.getDate() && cm === today.getMonth() && cy === today.getFullYear()) el.classList.add('today');
+    if (d === selDay) el.classList.add('selected');
+
+    if (isPast || isSunday) {
+      el.classList.add('inactive');
+    } else {
+      const ds = dateStrFn(cy, cm, d);
+      const isClosedDay = window._closedDays && window._closedDays[ds];
+      const isAbsentDay = selBarber ? isBarberAbsentOn(selBarber, ds) : false;
+      // NEU: Schichtplan prüfen
+      const hasShift = selBarber ? barberWorksOn(selBarber, ds) : true;
+
+      if (isClosedDay) {
+        el.classList.add('closed');
+        el.title = typeof isClosedDay === 'string' ? isClosedDay : 'Ruhetag';
+      } else if (isAbsentDay || !hasShift) {
+        el.classList.add('inactive');
+        if (!hasShift && selBarber) el.title = 'Kein Dienst';
+      } else {
+        if (selBarber && totalDuration() > 0) {
+          const free = getAvailableSlots(selBarber, ds, totalDuration());
+          if (free.length > 0) el.classList.add('has-slots');
+          else if (ds === todayStr) el.classList.add('inactive'); // heute aber keine Slots mehr
+        }
+        el.onclick = () => {
+          selDay = d; selSlot = null;
+          renderCal(); renderSlots(); updateBarberCards();
+        };
+      }
+    }
+    grid.appendChild(el);
+  }
+  if (selDay) renderSlots();
+}
+
+function renderSlots() {
+  const g = document.getElementById('slotsGrid');
+  const hint = document.getElementById('slotsDurHint');
+  if (!selBarber || totalDuration() === 0) {
+    g.innerHTML = '<div class="slot-empty">← Barber & Services wählen, dann Tag klicken</div>';
+    hint.textContent = ''; return;
+  }
+  if (!selDay) {
+    g.innerHTML = '<div class="slot-empty">← Tag im Kalender wählen</div>';
+    hint.textContent = ''; return;
+  }
+  const dur = totalDuration();
+  const ds = dateStrFn(cy, cm, selDay);
+
+  // Schicht anzeigen
+  const shift = getBarberShiftForDate(selBarber, ds);
+  if (!shift) {
+    g.innerHTML = '<div class="slot-empty">Kein Dienst an diesem Tag</div>';
+    hint.textContent = ''; return;
+  }
+  hint.textContent = dur + ' Min · Schicht ' + toTime(shift.start) + '–' + toTime(shift.end);
+
+  const slots = getAvailableSlots(selBarber, ds, dur);
+  g.innerHTML = '';
+  if (slots.length === 0) {
+    g.innerHTML = '<div class="slot-empty">Keine freien Zeiten an diesem Tag</div>'; return;
+  }
+  slots.forEach(s => {
+    const el = document.createElement('div'); el.className = 'slot'; el.textContent = s;
+    if (s === selSlot) el.classList.add('selected');
+    el.onclick = () => {
+      selSlot = s;
+      document.getElementById('sum-datetime').textContent = selDay + '. ' + months[cm] + ' ' + cy + ' · ' + s + ' Uhr';
+      document.getElementById('sum-datetime').classList.remove('empty');
+      renderSlots(); checkBookBtn(); updateSteps();
+    };
+    g.appendChild(el);
+  });
+}
+
+function changeMonth(d) {
+  cm += d;
+  if (cm > 11) { cm = 0; cy++; }
+  if (cm < 0) { cm = 11; cy--; }
+  selDay = null; selSlot = null; renderCal();
+}
+
+function updateSteps() {
+  document.getElementById('step1').className = 'step' + (selBarber ? ' done' : ' active');
+  document.getElementById('step2').className = 'step' + (!selBarber ? '' : totalDuration() > 0 ? ' done' : ' active');
+  document.getElementById('step3').className = 'step' + (totalDuration() === 0 ? '' : selSlot ? ' done' : ' active');
+  document.getElementById('step4').className = 'step' + (selSlot ? ' active' : '');
+}
+
+function checkBookBtn() {
+  document.getElementById('btnBook').disabled = !(selBarber && totalDuration() > 0 && selDay && selSlot);
+}
+
+async function submitBooking() {
+  const vorname = document.getElementById('inp-vorname').value.trim();
+  const nachname = document.getElementById('inp-nachname').value.trim();
+  const email = document.getElementById('inp-email').value.trim();
+  const tel = document.getElementById('inp-tel').value.trim();
+  if (!vorname || !nachname || !email) { alert('Bitte Vor- und Nachname sowie E-Mail ausfüllen.'); return; }
+  const btn = document.getElementById('btnBook');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="loading-spinner"></span> Wird gebucht...';
+  const ds = dateStrFn(cy, cm, selDay);
+  const dur = totalDuration();
+  const bookingId = 'booking_' + Date.now();
+  const booking = {
+    barberId: selBarber, barberName: selBarberName,
+    services: selectedServices.map(s => s.name).join(' + '),
+    duration: dur, date: ds, time: selSlot,
+    customer: { vorname, nachname, email, tel },
+    bookedAt: new Date().toISOString()
+  };
+  try {
+    await window.saveToFirebase(booking, bookingId);
+    if (!window._bookedSlotsDB[selBarber]) window._bookedSlotsDB[selBarber] = {};
+    if (!window._bookedSlotsDB[selBarber][ds]) window._bookedSlotsDB[selBarber][ds] = [];
+    window._bookedSlotsDB[selBarber][ds].push({ time: selSlot, duration: dur });
+
+    // Storno-Link mit Booking ID
+    const stornoLink = window.location.origin + window.location.pathname.replace(/[^/]*$/, '') + 'cancel.html?id=' + bookingId;
+
+    // Bestätigungs-Email senden
+    try {
+      await emailjs.send('service_go4z7va', 'template_8h6yuee', {
+        to_email: email,
+        vorname: vorname,
+        datum: selDay + '. ' + months[cm] + ' ' + cy,
+        uhrzeit: selSlot,
+        services: booking.services,
+        barber: selBarberName,
+        dauer: dur,
+        storno_link: stornoLink
+      });
+    } catch(emailErr) {
+      console.warn('Email konnte nicht gesendet werden:', emailErr);
+    }
+
+    document.getElementById('bookForm').style.display = 'none';
+    document.getElementById('successBox').classList.add('show');
+    document.getElementById('successText').innerHTML =
+      `<strong>${vorname} ${nachname}</strong><br>` +
+      `${booking.services}<br>bei <strong>${selBarberName}</strong><br>` +
+      `${selDay}. ${months[cm]} ${cy} · <strong>${selSlot} Uhr</strong> (${dur} Min)<br><br>` +
+      `✅ Bestätigungs-Email wurde an <strong>${email}</strong> gesendet`;
+  } catch(err) {
+    alert('Fehler. Bitte nochmal versuchen.');
+    btn.disabled = false; btn.textContent = 'Termin buchen';
+  }
+}
+
+function resetBooking() {
+  selBarber = null; selBarberName = null; selectedServices = []; selDay = null; selSlot = null;
+  document.querySelectorAll('.barber-card').forEach(c => c.classList.remove('selected'));
+  document.querySelectorAll('.svc-tag').forEach(t => t.classList.remove('selected'));
+  document.getElementById('durationBar').style.display = 'none';
+  ['sum-barber','sum-service','sum-datetime','sum-duration'].forEach(id => {
+    const el = document.getElementById(id); el.classList.add('empty');
+  });
+  document.getElementById('sum-barber').textContent = 'Noch nicht gewählt';
+  document.getElementById('sum-service').textContent = 'Noch nicht gewählt';
+  document.getElementById('sum-datetime').textContent = 'Noch nicht gewählt';
+  document.getElementById('sum-duration').textContent = '—';
+  document.getElementById('inp-vorname').value = '';
+  document.getElementById('inp-nachname').value = '';
+  document.getElementById('inp-email').value = '';
+  document.getElementById('inp-tel').value = '';
+  document.getElementById('bookForm').style.display = '';
+  document.getElementById('successBox').classList.remove('show');
+  document.getElementById('btnBook').textContent = 'Termin buchen';
+  updateSteps(); renderCal(); updateBarberCards();
+}
+
+renderCal(); updateSteps();
+
+window.renderCal = renderCal;
+window.renderSlots = renderSlots;
+window.updateBarberCards = updateBarberCards;
+</script>
+</body>
+</html>
