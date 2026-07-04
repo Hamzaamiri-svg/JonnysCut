@@ -769,6 +769,7 @@ async function submitBooking() {
     const stornoLink = 'https://fastidious-piroshki-071a25.netlify.app/cancel.html?id=' + bookingId;
 
     // Bestätigungs-Email senden
+    let emailStatusHtml = `✅ Bestätigungs-Email wurde an <strong>${email}</strong> gesendet`;
     try {
       await emailjs.send('service_go4z7va', 'template_8h6yuee', {
         to_email: email,
@@ -781,7 +782,8 @@ async function submitBooking() {
         storno_link: stornoLink
       });
     } catch(emailErr) {
-      console.warn('Email konnte nicht gesendet werden:', emailErr);
+      window.showDebug('EmailJS Fehler: ' + JSON.stringify(emailErr));
+      emailStatusHtml = `⚠️ Termin gespeichert, aber Email konnte nicht gesendet werden.<br><span style="color:#ef4444;font-size:0.7rem">${(emailErr && (emailErr.text || emailErr.message)) || JSON.stringify(emailErr)}</span>`;
     }
 
     document.getElementById('bookForm').style.display = 'none';
@@ -790,7 +792,7 @@ async function submitBooking() {
       `<strong>${vorname} ${nachname}</strong><br>` +
       `${booking.services}<br>bei <strong>${selBarberName}</strong><br>` +
       `${selDay}. ${months[cm]} ${cy} · <strong>${selSlot} Uhr</strong> (${dur} Min)<br><br>` +
-      `✅ Bestätigungs-Email wurde an <strong>${email}</strong> gesendet`;
+      emailStatusHtml;
   } catch(err) {
     alert('Fehler. Bitte nochmal versuchen.');
     btn.disabled = false; btn.textContent = 'Termin buchen';
