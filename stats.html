@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Jonny's Cut — Erfolgszahlen</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@300;400;500;600;700&family=Oswald:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --dark: #0e0e12; --card: #13131a; --border: rgba(255,255,255,0.07); --white: #f0f0f5;
+  --blue: #0057FF; --cyan: #00c8ff;
+  --heading: 'Oswald', sans-serif; --display: 'Bebas Neue', Impact, sans-serif;
+}
+body { background: var(--dark); color: var(--white); font-family: 'Inter', sans-serif; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 2rem; }
+.box { max-width: 480px; width: 100%; text-align: center; }
+.logo { font-family: var(--display); font-size: 2.2rem; background: linear-gradient(90deg, var(--blue), var(--cyan)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; margin-bottom: 0.4rem; }
+.sub { font-size: 0.72rem; color: rgba(255,255,255,0.35); letter-spacing: 0.12em; text-transform: uppercase; font-family: var(--heading); margin-bottom: 2.5rem; }
+.stat-card { background: var(--card); border: 1px solid var(--border); padding: 1.6rem; margin-bottom: 1rem; }
+.stat-num { font-family: var(--display); font-size: 3rem; line-height: 1; color: var(--cyan); }
+.stat-label { font-family: var(--heading); font-size: 0.7rem; letter-spacing: 0.14em; text-transform: uppercase; color: rgba(255,255,255,0.4); margin-top: 0.4rem; }
+.loading { color: rgba(255,255,255,0.3); font-size: 0.8rem; }
+</style>
+</head>
+<body>
+<div class="box">
+  <div class="logo">Jonny's Cut</div>
+  <div class="sub">Unsere Erfolgszahlen</div>
+
+  <div class="stat-card">
+    <div class="stat-num" id="statMonth">–</div>
+    <div class="stat-label" id="statMonthLabel">Termine diesen Monat</div>
+  </div>
+
+  <div class="stat-card">
+    <div class="stat-num" id="statYear">–</div>
+    <div class="stat-label" id="statYearLabel">Termine dieses Jahr</div>
+  </div>
+
+  <div class="stat-card">
+    <div class="stat-num" id="statAllTime">–</div>
+    <div class="stat-label">Termine insgesamt</div>
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getDatabase, ref, get } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js';
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAXcUYg35hcQKBRZYa8NmU_a8EBKtApLdE",
+  authDomain: "jonny-s-cut.firebaseapp.com",
+  databaseURL: "https://jonny-s-cut-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "jonny-s-cut",
+  storageBucket: "jonny-s-cut.firebasestorage.app",
+  messagingSenderId: "1070305082396",
+  appId: "1:1070305082396:web:2ca5c5cd311973f1d3b3d9"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+const months = ['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
+const now = new Date();
+const monthKey = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0');
+const yearKey = String(now.getFullYear());
+
+document.getElementById('statMonthLabel').textContent = 'Termine im ' + months[now.getMonth()];
+document.getElementById('statYearLabel').textContent = 'Termine ' + yearKey;
+
+async function loadStat(path, elId) {
+  const snap = await get(ref(db, path));
+  const data = snap.exists() ? snap.val() : {};
+  const created = data.created || 0;
+  const cancelled = data.cancelled || 0;
+  document.getElementById(elId).textContent = Math.max(0, created - cancelled);
+}
+
+loadStat('stats/monthly/' + monthKey, 'statMonth');
+loadStat('stats/yearly/' + yearKey, 'statYear');
+loadStat('stats/allTime', 'statAllTime');
+</script>
+</body>
+</html>

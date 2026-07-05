@@ -303,12 +303,18 @@ window.onerror = function(msg, src, line) {
 };
 </script>
 
-<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
-<script>emailjs.init('5O5WaqPef_AUBVmlr');</script>
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js" crossorigin="anonymous"></script>
+<script>
+if (typeof emailjs !== 'undefined') {
+  emailjs.init('5O5WaqPef_AUBVmlr');
+} else {
+  window.emailjs = { send: async () => { throw new Error('EmailJS Script konnte nicht geladen werden (evtl. von Browser/Adblocker blockiert)'); } };
+}
+</script>
 
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-import { getDatabase, ref, set, remove, onValue, update } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js';
+import { getDatabase, ref, set, remove, onValue, update, runTransaction } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js';
 
 const firebaseConfig = {
   apiKey: "AIzaSyAXcUYg35hcQKBRZYa8NmU_a8EBKtApLdE",
@@ -355,6 +361,22 @@ try {
     } catch(e) { window.showDebug('shifts: ' + e.message); }
   });
 
+  onValue(ref(db, 'stats'), (snapshot) => {
+    try {
+      window._stats = snapshot.exists() ? snapshot.val() : {};
+      if (typeof window.renderCurrentView === 'function') window.renderCurrentView();
+    } catch(e) { window.showDebug('stats: ' + e.message); }
+  });
+
+  window.incrementCancelledStat = async (barberId) => {
+    const now = new Date();
+    const monthKey = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0');
+    const yearKey = String(now.getFullYear());
+    await runTransaction(ref(db, 'stats/' + barberId + '/cancelled'), (cur) => (cur || 0) + 1);
+    await runTransaction(ref(db, 'stats/allTime/cancelled'), (cur) => (cur || 0) + 1);
+    await runTransaction(ref(db, 'stats/monthly/' + monthKey + '/cancelled'), (cur) => (cur || 0) + 1);
+    await runTransaction(ref(db, 'stats/yearly/' + yearKey + '/cancelled'), (cur) => (cur || 0) + 1);
+  };
   window.deleteBooking = async (id) => { await remove(ref(db, 'bookings/' + id)); };
   window.updateBooking = async (id, data) => { await update(ref(db, 'bookings/' + id), data); };
   window.setAbsent = async (barberId, date, value) => {
@@ -421,6 +443,7 @@ window._allBookings = {};
 window._absent = {};
 window._closedDays = {};
 window._shifts = {};
+window._stats = {};
 
 function dateStr(d) { return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
 function toMin(t) { if(!t||typeof t!=='string') return 0; const [h,m]=t.split(':').map(Number); return h*60+m; }
@@ -778,10 +801,15 @@ function renderSettings() {
   let html = `<div class="section-title">Verfügbarkeit — ${currentDate.getDate()}. ${MONTHS[currentDate.getMonth()]}</div>`;
   BARBERS_ONLY.forEach(b => {
     const absent = isAbsent(b.id, ds);
+    const stat = (window._stats && window._stats[b.id]) || {};
+    const created = stat.created || 0;
+    const cancelled = stat.cancelled || 0;
+    const successful = created - cancelled;
     html += `<div class="settings-card">
       <div>
         <div class="settings-name">${b.name}</div>
         <div class="settings-status" style="color:${absent?'var(--red)':'var(--green)'}">${absent?'⚠️ Abwesend':'✓ Verfügbar'}</div>
+        <div style="font-size:0.65rem;color:rgba(255,255,255,0.3);margin-top:0.3rem">📊 ${created} gebucht − ${cancelled} storniert = <strong style="color:var(--cyan)">${successful} erfolgreich</strong></div>
       </div>
       <button class="toggle-btn" onclick="toggleAbsent('${b.id}',${!absent})" style="color:${absent?'var(--green)':'var(--red)'};border-color:${absent?'rgba(34,197,94,0.3)':'rgba(239,68,68,0.3)'};background:${absent?'rgba(34,197,94,0.08)':'rgba(239,68,68,0.08)'}">
         ${absent?'Verfügbar':'Abwesend'}
@@ -844,6 +872,7 @@ async function confirmCancel() {
   const b = cancelBooking;
   const email = b.customer?.email;
   await window.deleteBooking(cancelId);
+  await window.incrementCancelledStat(b.barberId);
   if (email) {
     try {
       await emailjs.send('service_go4z7va', 'template_t4i5abl', {
