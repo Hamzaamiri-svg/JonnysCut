@@ -786,6 +786,22 @@ async function submitBooking() {
       emailStatusHtml = `⚠️ Termin gespeichert, aber Email konnte nicht gesendet werden.<br><span style="color:#ef4444;font-size:0.7rem">${(emailErr && (emailErr.text || emailErr.message)) || JSON.stringify(emailErr)}</span>`;
     }
 
+    // Kopie an den Barber Shop selbst (Benachrichtigung über neue Buchung)
+    try {
+      await emailjs.send('service_go4z7va', 'template_8h6yuee', {
+        to_email: 'jonnyscut10@gmail.com',
+        vorname: vorname + ' ' + nachname + ' (neue Buchung)',
+        datum: selDay + '. ' + months[cm] + ' ' + cy,
+        uhrzeit: selSlot,
+        services: booking.services,
+        barber: selBarberName,
+        dauer: dur,
+        storno_link: stornoLink
+      });
+    } catch(ownerEmailErr) {
+      console.warn('Benachrichtigung an Shop fehlgeschlagen:', ownerEmailErr);
+    }
+
     document.getElementById('bookForm').style.display = 'none';
     document.getElementById('successBox').classList.add('show');
     document.getElementById('successText').innerHTML =
