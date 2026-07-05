@@ -303,6 +303,9 @@ window.onerror = function(msg, src, line) {
 };
 </script>
 
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<script>emailjs.init('5O5WaqPef_AUBVmlr');</script>
+
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
 import { getDatabase, ref, set, remove, onValue, update } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js';
@@ -840,24 +843,21 @@ async function confirmCancel() {
   if (!cancelId || !cancelBooking) return;
   const b = cancelBooking;
   const email = b.customer?.email;
-  if (email) {
-    // Build mailto link — opens mail client with prefilled email
-    const subject = encodeURIComponent(`Dein Termin bei Jonny's Cut wurde storniert`);
-    const body = encodeURIComponent(
-      `Hallo ${b.customer?.vorname||''},\n\n` +
-      `dein Termin bei Jonny's Cut wurde leider storniert:\n\n` +
-      `✂️ Service: ${b.services}\n` +
-      `📅 Datum: ${b.date}\n` +
-      `🕐 Zeit: ${b.time} Uhr\n` +
-      `💈 Barber: ${b.barberName}\n\n` +
-      `Bitte buche einen neuen Wunschtermin über unsere Website.\n\n` +
-      `Entschuldige die Unannehmlichkeiten!\n\n` +
-      `Dein Team von Jonny's Cut`
-    );
-    // Open mail client — in production replace with actual email API (e.g. EmailJS, SendGrid)
-    window.open(`mailto:${email}?subject=${subject}&body=${body}`, '_blank');
-  }
   await window.deleteBooking(cancelId);
+  if (email) {
+    try {
+      await emailjs.send('service_go4z7va', 'template_t4i5abl', {
+        to_email: email,
+        vorname: b.customer?.vorname || '',
+        datum: b.date,
+        uhrzeit: b.time,
+        services: b.services,
+        barber: b.barberName,
+        headline: 'Dein Barber musste deinen Termin leider absagen 😕',
+        message: 'Es ist kurzfristig etwas dazwischengekommen. Bitte buche einfach einen neuen Wunschtermin über unsere Website — wir freuen uns auf dich!'
+      });
+    } catch(e) { console.warn('Storno-Email an Kunde fehlgeschlagen:', e); }
+  }
   closeModal('cancelModal');
   cancelId = null;
   cancelBooking = null;
@@ -904,23 +904,22 @@ function selectSubBarber(id, name) {
 async function confirmSub() {
   if (!subId || !subSelectedBarber) { alert('Bitte einen Barber wählen.'); return; }
   const subName = BARBERS_ONLY.find(b => b.id === subSelectedBarber)?.name || subSelectedBarber;
-  await window.updateBooking(subId, { substituteId: subSelectedBarber, substituteName: subName });
-  // Also notify customer via email
   const b = window._allBookings[subId];
+  const originalBarberName = b?.barberName;
+  await window.updateBooking(subId, { substituteId: subSelectedBarber, substituteName: subName });
   if (b && b.customer?.email) {
-    const subject = encodeURIComponent(`Update zu deinem Termin bei Jonny's Cut`);
-    const body = encodeURIComponent(
-      `Hallo ${b.customer?.vorname||''},\n\n` +
-      `ein kleines Update zu deinem Termin:\n\n` +
-      `✂️ Service: ${b.services}\n` +
-      `📅 Datum: ${b.date}\n` +
-      `🕐 Zeit: ${b.time} Uhr\n` +
-      `💈 Ursprünglich: ${b.barberName}\n` +
-      `↔️ Vertretung: ${subName}\n\n` +
-      `Dein Termin findet wie geplant statt — nur mit einer Vertretung.\n\n` +
-      `Bis dann!\nDein Team von Jonny's Cut`
-    );
-    window.open(`mailto:${b.customer.email}?subject=${subject}&body=${body}`, '_blank');
+    try {
+      await emailjs.send('service_go4z7va', 'template_t4i5abl', {
+        to_email: b.customer.email,
+        vorname: b.customer?.vorname || '',
+        datum: b.date,
+        uhrzeit: b.time,
+        services: b.services,
+        barber: subName,
+        headline: 'Kleines Update zu deinem Termin',
+        message: `${originalBarberName} kann deinen Termin leider nicht übernehmen — <strong>${subName}</strong> vertritt ihn aber und dein Termin findet ganz normal statt.`
+      });
+    } catch(e) { console.warn('Vertretungs-Email an Kunde fehlgeschlagen:', e); }
   }
   closeModal('subModal');
   subId = null;

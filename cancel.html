@@ -143,7 +143,9 @@ if (!bookingId) {
             datum: dateFormatted,
             uhrzeit: b.time,
             services: b.services,
-            barber: b.barberName
+            barber: b.barberName,
+            headline: 'Schade, dass du deinen Termin storniert hast 😕',
+            message: 'Wir hatten uns eigentlich auf dich gefreut — aber kein Stress, sowas passiert. Falls du wieder Lust auf einen frischen Cut hast, sind wir jederzeit für dich da.'
           });
         } catch(emailErr) {
           const msg = (emailErr && (emailErr.text || emailErr.message)) || JSON.stringify(emailErr);
