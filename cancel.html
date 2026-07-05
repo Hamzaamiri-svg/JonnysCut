@@ -136,7 +136,7 @@ if (!bookingId) {
         await remove(ref(db, 'bookings/' + bookingId));
         show('stateSuccess');
         try {
-          await emailjs.send('service_go4z7va', 'template_storno', {
+          await emailjs.send('service_go4z7va', 'template_t4i5abl', {
             to_email: b.customer?.email || '',
             vorname: b.customer?.vorname || '',
             datum: dateFormatted,
