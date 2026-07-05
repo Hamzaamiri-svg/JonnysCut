@@ -64,9 +64,9 @@ body { background: var(--dark); color: var(--white); font-family: 'Inter', sans-
 
   <!-- Erfolg -->
   <div id="stateSuccess" style="display:none">
-    <div class="icon">✅</div>
-    <div class="title" style="color:var(--green)">Storniert!</div>
-    <div class="text">Dein Termin wurde erfolgreich storniert.<br>Der Slot ist jetzt wieder für andere buchbar.</div>
+    <div class="icon">😕</div>
+    <div class="title" style="color:var(--red)">Storniert...</div>
+    <div class="text">Dein Termin wurde storniert. Schade — wir hatten uns auf dich gefreut.<br>Der Slot ist jetzt für jemand anderen frei.<br><br>Falls du es dir anders überlegst, buch einfach wieder einen neuen Termin.</div>
   </div>
 
   <!-- Nicht gefunden -->
@@ -77,6 +77,8 @@ body { background: var(--dark); color: var(--white); font-family: 'Inter', sans-
   </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<script>emailjs.init('5O5WaqPef_AUBVmlr');</script>
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
 import { getDatabase, ref, get, remove } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js';
@@ -133,6 +135,18 @@ if (!bookingId) {
       try {
         await remove(ref(db, 'bookings/' + bookingId));
         show('stateSuccess');
+        try {
+          await emailjs.send('service_go4z7va', 'template_storno', {
+            to_email: b.customer?.email || '',
+            vorname: b.customer?.vorname || '',
+            datum: dateFormatted,
+            uhrzeit: b.time,
+            services: b.services,
+            barber: b.barberName
+          });
+        } catch(emailErr) {
+          console.warn('Storno-Email konnte nicht gesendet werden:', emailErr);
+        }
       } catch(e) {
         document.getElementById('btnCancel').disabled = false;
         document.getElementById('loadingMsg').classList.remove('show');
