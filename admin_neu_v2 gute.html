@@ -62,12 +62,12 @@ body { background: var(--dark); color: var(--white); font-family: var(--body); m
 .timeline-now-line::before { content: ''; position: absolute; left: -4px; top: -4px; width: 8px; height: 8px; background: var(--red); border-radius: 50%; }
 .timeline-block {
   position: absolute; left: 4px; right: 4px;
-  background: rgba(0,87,255,0.2); border: 1px solid rgba(0,87,255,0.4);
-  border-left: 3px solid var(--blue); padding: 0.3rem 0.5rem;
+  background: rgba(245,158,11,0.15); border: 1px solid rgba(245,158,11,0.35);
+  border-left: 3px solid #f59e0b; padding: 0.3rem 0.5rem;
   cursor: pointer; transition: all 0.15s; overflow: hidden; z-index: 2;
 }
-.timeline-block:hover { background: rgba(0,87,255,0.35); }
-.timeline-block.past { background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.1); border-left-color: rgba(255,255,255,0.2); }
+.timeline-block:hover { background: rgba(245,158,11,0.28); }
+.timeline-block.past { background: rgba(34,197,94,0.12); border-color: rgba(34,197,94,0.3); border-left-color: var(--green); }
 .timeline-block.substituted { background: rgba(124,58,237,0.2); border-color: rgba(124,58,237,0.4); border-left-color: var(--purple); }
 .timeline-block-name { font-size: 0.75rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .timeline-block-service { font-size: 0.62rem; color: rgba(255,255,255,0.45); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -377,7 +377,7 @@ try {
     await runTransaction(ref(db, 'stats/monthly/' + monthKey + '/cancelled'), (cur) => (cur || 0) + 1);
     await runTransaction(ref(db, 'stats/yearly/' + yearKey + '/cancelled'), (cur) => (cur || 0) + 1);
   };
-  window.deleteBooking = async (id) => { await remove(ref(db, 'bookings/' + id)); };
+  window.deleteBooking = async (id) => { await update(ref(db, 'bookings/' + id), { status: 'cancelled', cancelledAt: new Date().toISOString() }); };
   window.updateBooking = async (id, data) => { await update(ref(db, 'bookings/' + id), data); };
   window.setAbsent = async (barberId, date, value) => {
     const key = barberId + '_' + date;
@@ -436,7 +436,7 @@ let cancelId = null;
 let cancelBooking = null;
 let subId = null;
 let subSelectedBarber = null;
-let weekBarberFilter = 'jonny';
+let weekBarberFilter = 'alle';
 let openShiftBarber = null;
 
 window._allBookings = {};
@@ -455,7 +455,7 @@ function isAbsent(barberId, date) {
 function getBookingsForDay(barberId, date) {
   const ds = typeof date === 'string' ? date : dateStr(date);
   return Object.entries(window._allBookings||{})
-    .filter(([,b]) => b && b.date && b.time && b.date===ds && (barberId==='alle'||b.barberId===barberId))
+    .filter(([,b]) => b && b.date && b.time && b.date===ds && b.status !== 'cancelled' && (barberId==='alle'||(b.barberId||'').toLowerCase()===(barberId||'').toLowerCase()))
     .sort((a,b) => (a[1].time||'').localeCompare(b[1].time||''));
 }
 
@@ -506,7 +506,9 @@ function renderTimeline() {
   }
 
   const total = bookings.length;
-  const done = isToday ? bookings.filter(([,b])=>{const e=toMin(b.time)+(b.duration||30); return e<(now.getHours()*60+now.getMinutes());}).length : 0;
+  const nowMin = now.getHours()*60+now.getMinutes();
+  const isPastDay = ds < dateStr(now);
+  const done = isPastDay ? total : isToday ? bookings.filter(([,b])=>{ const e=toMin(b.time)+(b.duration||30); return e<=nowMin; }).length : 0;
   html += `<div class="stats-row">
     <div class="stat-card"><div class="stat-num blue">${total}</div><div class="stat-label">Gesamt</div></div>
     <div class="stat-card"><div class="stat-num green">${done}</div><div class="stat-label">Fertig</div></div>
@@ -633,8 +635,16 @@ function renderWeek() {
 
   let html = `<div class="section-title">Wochenansicht</div>`;
 
-  // Barber-Filter (nur Einzelpersonen, kein "Alle" in Woche)
+  // Barber-Filter
   html += `<div class="week-barber-filter">`;
+  let alleTotal = 0;
+  for (let i=0; i<7; i++) {
+    const d = new Date(monday); d.setDate(monday.getDate()+i);
+    alleTotal += getBookingsForDay('alle', dateStr(d)).length;
+  }
+  html += `<button class="wbf-btn ${weekBarberFilter==='alle'?'active':''}" onclick="setWeekFilter('alle')">
+    Alle<span class="tab-count ${alleTotal===0?'zero':''}" style="margin-left:0.4rem">${alleTotal}</span>
+  </button>`;
   BARBERS_ONLY.forEach(b => {
     // Termine dieser Woche zählen
     let weekTotal = 0;
@@ -875,15 +885,15 @@ async function confirmCancel() {
   await window.incrementCancelledStat(b.barberId);
   if (email) {
     try {
-      await emailjs.send('service_go4z7va', 'template_t4i5abl', {
+      await emailjs.send('service_go4z7va', 'template_8h6yuee', {
         to_email: email,
         vorname: b.customer?.vorname || '',
         datum: b.date,
         uhrzeit: b.time,
         services: b.services,
         barber: b.barberName,
-        headline: 'Dein Barber musste deinen Termin leider absagen 😕',
-        message: 'Es ist kurzfristig etwas dazwischengekommen. Bitte buche einfach einen neuen Wunschtermin über unsere Website — wir freuen uns auf dich!'
+        headline: 'dein Termin bei Jonny\'s Cut wurde leider storniert:',
+        message: 'Bitte buche einen neuen Wunschtermin über unsere Website. Entschuldige die Unannehmlichkeiten!'
       });
     } catch(e) { console.warn('Storno-Email an Kunde fehlgeschlagen:', e); }
   }
